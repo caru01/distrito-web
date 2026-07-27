@@ -1,28 +1,32 @@
-// Servicio de datos: usa el endpoint de Vite en desarrollo,
-// y el endpoint de producción cuando está desplegado.
+import { API_URL } from "./config/api";
 
-const API_URL = import.meta.env.PROD
-  ? 'https://galushop.store/distrito/api/pedidos'
-  : '/api/pedidos';
+const PEDIDOS_API = `${API_URL}/api/pedidos`;
 
 export async function fetchInitData() {
   try {
-    const response = await fetch(`${API_URL}/init`);
+    const response = await fetch(`${PEDIDOS_API}/init`);
+
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
     const data = await response.json();
-    if (data.status === 'ok') {
+
+    if (data.status === "ok") {
       console.log(`✅ ${data.products.length} productos cargados.`);
       return data;
     }
-    throw new Error(data.message || 'Error en respuesta');
+
+    throw new Error(data.message || "Error en respuesta");
   } catch (error) {
-    console.error('❌ Error cargando datos:', error.message);
-    // Retorna vacío para que la UI muestre "sin productos"
-    // en vez de datos de demo incorrectos
+    console.error("❌ Error cargando datos:", error.message);
+
     return {
-      status: 'ok',
+      status: "ok",
       products: [],
-      settings: { whatsapp_number: '', nequi_number: '', bancolombia_number: '' },
+      settings: {
+        whatsapp_number: "",
+        nequi_number: "",
+        bancolombia_number: ""
+      }
     };
   }
 }
