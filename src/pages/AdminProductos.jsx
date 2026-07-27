@@ -4,7 +4,7 @@ import {
   Image as ImageIcon, Eye, Pencil, Copy, Trash2, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 
-const API_URL = import.meta.env.PROD ? '/api/pedidos' : 'http://localhost:3001/api/pedidos';
+import { API_URL } from '../config/api';
 
 export default function AdminProductos() {
   const [products, setProducts] = useState([]);

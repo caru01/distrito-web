@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Folder, Plus, Search, Package, BadgeCheck, Pencil, Trash2, ChevronLeft, ChevronRight, X, Utensils } from 'lucide-react';
 
-const API_URL = import.meta.env.PROD ? '/api/pedidos' : 'http://localhost:3001/api/pedidos';
+import { API_URL } from '../config/api';
 
 // Gran variedad de Emojis modernos para gastronomía
 const EMOJI_OPTIONS = [

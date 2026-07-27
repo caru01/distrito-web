@@ -2,9 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share } from 'lucide-react';
 import logoImg from './assets/logo-horizontal.png';
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD 
-  ? '/api/pedidos' 
-  : 'http://localhost:3001/api/pedidos');
+import { API_URL } from './config/api';
 
 
 function App() {
@@ -103,7 +101,7 @@ function App() {
       setRatedProducts(newRated);
       localStorage.setItem('distrito_rated_products', JSON.stringify(newRated));
 
-      await fetch(`${API_URL}/rate`, {
+      await fetch(`${API_URL}/api/pedidos/rate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: productId, rating })
@@ -135,7 +133,7 @@ function App() {
       .then(data => setHorariosStatus(data))
       .catch(console.error);
 
-    fetch(`${API_URL}/init`)
+    fetch(`${API_URL}/api/pedidos/init`)
       .then(res => res.json())
       .then(data => {
         if(data.status === 'ok') {
@@ -167,7 +165,7 @@ function App() {
               userVisibleOnly: true,
               applicationServerKey: 'BBCJtzBn22IJcujyWlCCwtSAyWLfsiELTqWAjQcEiOuPX0yiad9P5LIpMJv5T8VwkHJU0vxLHTqFYImzLYWBQyU'
             });
-            await fetch(`${API_URL}/push/subscribe`, {
+            await fetch(`${API_URL}/api/pedidos/push/subscribe`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ subscription })
@@ -179,7 +177,7 @@ function App() {
                 userVisibleOnly: true,
                 applicationServerKey: 'BBCJtzBn22IJcujyWlCCwtSAyWLfsiELTqWAjQcEiOuPX0yiad9P5LIpMJv5T8VwkHJU0vxLHTqFYImzLYWBQyU'
               });
-              await fetch(`${API_URL}/push/subscribe`, {
+              await fetch(`${API_URL}/api/pedidos/push/subscribe`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ subscription })

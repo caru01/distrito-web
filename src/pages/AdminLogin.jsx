@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
 
-const API_URL = import.meta.env.PROD ? '/api/pedidos' : 'http://localhost:3001/api/pedidos';
+import { API_URL } from '../config/api';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');

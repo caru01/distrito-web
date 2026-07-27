@@ -5,7 +5,7 @@ import {
   Mail, MapPin, DollarSign, Globe, Check
 } from 'lucide-react';
 
-const API_URL = import.meta.env.PROD ? '/api/pedidos' : 'http://localhost:3001/api/pedidos';
+import { API_URL } from '../config/api';
 
 export default function AdminConfiguración() {
   const [activeTab, setActiveTab] = useState('Empresa');
