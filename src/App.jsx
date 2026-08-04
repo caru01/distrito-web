@@ -3,7 +3,40 @@ import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLe
 import logoImg from './assets/logo-horizontal.png';
 
 import { API_URL } from './config/api';
+import OrderTracker from './components/OrderTracker';
+import { DeliveryAddressPicker } from '@distrito/shared-ui';
+import { applyWebTheme } from './utils/theme';
 
+function announcementStorageKey(announcement) {
+  return `distrito_announcement_${announcement.id}_${announcement.updated_at || 'current'}`;
+}
+
+function colombiaDay() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+}
+
+function shouldShowAnnouncement(announcement) {
+  if (!announcement?.is_active || announcement.is_visible === false) return false;
+  const key = announcementStorageKey(announcement);
+  if (announcement.display_frequency === 'always') return true;
+  if (announcement.display_frequency === 'daily') return localStorage.getItem(key) !== colombiaDay();
+  return sessionStorage.getItem(key) !== 'seen';
+}
+
+function markAnnouncementSeen(announcement) {
+  if (!announcement) return;
+  const key = announcementStorageKey(announcement);
+  if (announcement.display_frequency === 'daily') localStorage.setItem(key, colombiaDay());
+  else if (announcement.display_frequency !== 'always') sessionStorage.setItem(key, 'seen');
+}
+
+function trackingOrderFromUrl() {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const id = Number(params.get('pedido'));
+  const token = params.get('seguimiento') || '';
+  return Number.isInteger(id) && id > 0 && token ? { id, token, fromLink: true } : null;
+}
 
 function App() {
   const [activeCategory, setActiveCategory] = useState('all');
@@ -21,7 +54,11 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [announcement, setAnnouncement] = useState(null);
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
-  const [horariosStatus, setHorariosStatus] = useState({ isOpen: true, statusText: 'Abierto' });
+  const [horariosStatus, setHorariosStatus] = useState({ isOpen: false, statusText: 'Consultando horario…' });
+  const [isTrackingOpen, setIsTrackingOpen] = useState(() => Boolean(trackingOrderFromUrl()));
+  const [latestOrder, setLatestOrder] = useState(() => {
+    try { return trackingOrderFromUrl() || JSON.parse(localStorage.getItem('distrito_latest_order') || 'null'); } catch { return null; }
+  });
   
   // Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -101,7 +138,7 @@ function App() {
       setRatedProducts(newRated);
       localStorage.setItem('distrito_rated_products', JSON.stringify(newRated));
 
-      await fetch(`${API_URL}/api/pedidos/rate`, {
+      await fetch(`${API_URL}/rate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: productId, rating })
@@ -117,23 +154,40 @@ function App() {
     phone: '', 
     address: '',
     barrio: '',
+    reference: '',
+    apartment: '',
+    tower: '',
+    floor: '',
+    latitude: null,
+    longitude: null,
+    placeId: '',
+    locationAdjusted: false,
+    locationConfirmed: false,
     comment: '',
     deliveryType: 'domicilio',
     paymentMethod: 'efectivo',
     cashAmount: '',
     transferBank: 'nequi' // 'nequi' | 'banco'
   });
+  const [mapsAvailable, setMapsAvailable] = useState(
+    import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? null : false
+  );
+
+  const updateDeliveryLocation = (changes) => {
+    setCustomer((current) => ({ ...current, ...changes }));
+  };
 
   const [copiedNequi, setCopiedNequi] = useState(false);
   const [copiedBanco, setCopiedBanco] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/pedidos/horarios/status`)
-      .then(res => res.json())
-      .then(data => setHorariosStatus(data))
-      .catch(console.error);
+    const refreshSchedule = () => fetch(`${API_URL}/horarios/status`)
+      .then(res => res.json()).then(data => setHorariosStatus(data))
+      .catch(() => setHorariosStatus({ isOpen: false, statusText: 'No fue posible validar el horario' }));
+    refreshSchedule();
+    const scheduleTimer = setInterval(refreshSchedule, 60_000);
 
-    fetch(`${API_URL}/api/pedidos/init`)
+    fetch(`${API_URL}/init`)
       .then(res => res.json())
       .then(data => {
         if(data.status === 'ok') {
@@ -142,7 +196,13 @@ function App() {
             setCategoriesData(data.categories);
           }
           setSettings(data.settings || {});
-          if (data.announcement && data.announcement.is_active) {
+          applyWebTheme(data.settings || {});
+          setCustomer((current) => ({
+            ...current,
+            paymentMethod: data.settings?.payment_efectivo === false ? 'transferencia' : current.paymentMethod,
+            transferBank: data.settings?.payment_nequi === false ? 'banco' : current.transferBank,
+          }));
+          if (shouldShowAnnouncement(data.announcement)) {
             setAnnouncement(data.announcement);
             setIsAnnouncementOpen(true);
           }
@@ -153,7 +213,15 @@ function App() {
         console.error('Error fetching data:', err);
         setLoading(false);
       });
+    return () => clearInterval(scheduleTimer);
   }, []);
+
+  useEffect(() => {
+    if (latestOrder && sessionStorage.getItem('distrito_open_tracking_after_whatsapp') === 'true') {
+      sessionStorage.removeItem('distrito_open_tracking_after_whatsapp');
+      setIsTrackingOpen(true);
+    }
+  }, [latestOrder]);
 
   useEffect(() => {
     const registerPush = async () => {
@@ -165,7 +233,7 @@ function App() {
               userVisibleOnly: true,
               applicationServerKey: 'BBCJtzBn22IJcujyWlCCwtSAyWLfsiELTqWAjQcEiOuPX0yiad9P5LIpMJv5T8VwkHJU0vxLHTqFYImzLYWBQyU'
             });
-            await fetch(`${API_URL}/api/pedidos/push/subscribe`, {
+            await fetch(`${API_URL}/push/subscribe`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ subscription })
@@ -177,7 +245,7 @@ function App() {
                 userVisibleOnly: true,
                 applicationServerKey: 'BBCJtzBn22IJcujyWlCCwtSAyWLfsiELTqWAjQcEiOuPX0yiad9P5LIpMJv5T8VwkHJU0vxLHTqFYImzLYWBQyU'
               });
-              await fetch(`${API_URL}/api/pedidos/push/subscribe`, {
+              await fetch(`${API_URL}/push/subscribe`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ subscription })
@@ -222,6 +290,7 @@ function App() {
   }, [activeCategory, products]);
 
   const addToCart = (product) => {
+    if (product.track_stock && Number(product.stock) <= 0) return;
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -235,6 +304,7 @@ function App() {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
         const newQty = item.qty + delta;
+        if (item.track_stock && newQty > Number(item.stock || 0)) return item;
         return newQty > 0 ? { ...item, qty: newQty } : item;
       }
       return item;
@@ -259,6 +329,10 @@ function App() {
       alert("Tu carrito está vacío.");
       return;
     }
+    if (!horariosStatus?.isOpen) {
+      alert(`No podemos recibir el pedido: ${horariosStatus?.statusText || 'restaurante cerrado'}.`);
+      return;
+    }
     if (!customer.name || !customer.phone) {
       alert("Por favor ingresa nombre y teléfono.");
       return;
@@ -267,9 +341,22 @@ function App() {
       alert("Por favor ingresa la dirección y el barrio para el domicilio.");
       return;
     }
+    if (customer.deliveryType === 'domicilio' && mapsAvailable !== false
+        && (!customer.locationConfirmed || customer.latitude == null || customer.longitude == null)) {
+      alert("Selecciona una sugerencia, ajusta el marcador si hace falta y confirma la ubicación.");
+      return;
+    }
     if (customer.paymentMethod === 'efectivo' && !customer.cashAmount) {
       alert("Por favor ingresa con cuánto vas a pagar.");
       return;
+    }
+
+    let whatsappWindow = null;
+    try {
+      whatsappWindow = window.open('about:blank', 'distrito-order-whatsapp');
+      if (whatsappWindow) whatsappWindow.opener = null;
+    } catch {
+      whatsappWindow = null;
     }
     
     setLoading(true);
@@ -277,6 +364,7 @@ function App() {
     
     let dbOrderId = null;
     let orderNumber = "0000";
+    let trackingToken = '';
 
     try {
       // 1. Enviar la orden al backend (Dashboard CRM/Ventas) y obtener el ID
@@ -285,25 +373,29 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer,
-          cart,
-          total: subtotal
+          cart: cart.map(({ id, quantity, qty }) => ({ id, quantity: quantity || qty || 1 }))
         })
       });
       const data = await res.json();
-      if (data.status === 'ok' && data.order_id) {
-        dbOrderId = data.order_id;
-        orderNumber = String(dbOrderId).padStart(4, '0');
+      if (!res.ok || data.status !== 'ok' || !data.order_id) {
+        if (data.schedule) setHorariosStatus(data.schedule);
+        throw new Error(data.error || data.message || 'El pedido no pudo ser confirmado');
       }
+      dbOrderId = data.order_id;
+      orderNumber = String(dbOrderId).padStart(4, '0');
+      trackingToken = data.tracking_token || '';
+      if (!trackingToken) throw new Error('No fue posible generar el seguimiento temporal del pedido');
     } catch (error) {
-      console.error("Error guardando orden en dashboard:", error);
+      whatsappWindow?.close();
+      setLoading(false);
+      alert(error.message || 'No fue posible confirmar el pedido. No se realizó ningún cobro ni reserva.');
+      return;
     }
 
-    // Si falló el backend, usamos el local como fallback
-    if (!dbOrderId) {
-      let currentOrderNum = parseInt(localStorage.getItem('distrito_order_num') || '1');
-      orderNumber = String(currentOrderNum).padStart(4, '0');
-      localStorage.setItem('distrito_order_num', (currentOrderNum + 1).toString());
-    }
+    const trackingUrlObject = new URL(window.location.origin);
+    trackingUrlObject.searchParams.set('pedido', dbOrderId);
+    trackingUrlObject.searchParams.set('seguimiento', trackingToken);
+    const trackingUrl = trackingUrlObject.toString();
 
     let message = `*NUEVA ORDEN (#${orderNumber})*\n`;
     
@@ -313,7 +405,14 @@ function App() {
       message += `*Teléfono:* ${customer.phone}\n`;
       message += `*Entrega:* 🛵 A Domicilio\n`;
       message += `*Dirección:* ${customer.address}\n`;
-      message += `*Barrio:* ${customer.barrio}\n\n`;
+      message += `*Barrio:* ${customer.barrio}\n`;
+      message += `*Seguimiento temporal:* ${trackingUrl}\n\n`;
+      if (customer.apartment) message += `*Apartamento:* ${customer.apartment}\n`;
+      if (customer.tower) message += `*Torre:* ${customer.tower}\n`;
+      if (customer.floor) message += `*Piso:* ${customer.floor}\n`;
+      if (customer.latitude != null && customer.longitude != null) {
+        message += `*Ubicación exacta:* https://www.google.com/maps?q=${customer.latitude},${customer.longitude}\n\n`;
+      }
     } else {
       message += `Hola Distrito BG soy ${customer.name}, me gustaría hacer un pedido para recoger en el local\n\n`;
       message += `*Cliente:* ${customer.name}\n`;
@@ -328,6 +427,9 @@ function App() {
     
     if (customer.comment) {
       message += `*Comentarios:* ${customer.comment}\n`;
+    }
+    if (customer.reference) {
+      message += `*Referencia:* ${customer.reference}\n`;
     }
     
     message += `\n*Medio de Pago:* ${customer.paymentMethod === 'efectivo' ? '💵 Efectivo' : '💳 Transferencia'}\n`;
@@ -348,54 +450,26 @@ function App() {
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
     
-    // Cambiar la URL de la ventana actual para abrir WhatsApp
-    window.location.href = whatsappUrl;
-    
-    // Limpiar UI
+    const tracking = { id: dbOrderId, phone: customer.phone, token: trackingToken };
+    localStorage.setItem('distrito_latest_order', JSON.stringify(tracking));
+    setLatestOrder({ ...tracking, whatsappUrl });
+    setCart([]);
+    setCheckoutStep(1);
+    setIsCartOpenMobile(false);
+    setIsTrackingOpen(true);
     setLoading(false);
+    if (whatsappWindow) {
+      whatsappWindow.location.replace(whatsappUrl);
+      whatsappWindow.focus();
+    } else {
+      sessionStorage.setItem('distrito_open_tracking_after_whatsapp', 'true');
+      window.location.assign(whatsappUrl);
+    }
   };
-
-  const { isOpen, closeTimeStr, openTimeStr } = useMemo(() => {
-    if (!settings.open_time || !settings.close_time) {
-      return { isOpen: true, closeTimeStr: '10:00 PM', openTimeStr: '06:00 PM' };
-    }
-
-    const now = new Date();
-    const currentDayMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const currentDay = currentDayMap[now.getDay()];
-    
-    const isOpenDay = settings.business_days ? settings.business_days.includes(currentDay) : true;
-    const [openH, openM] = settings.open_time.split(':').map(Number);
-    const [closeH, closeM] = settings.close_time.split(':').map(Number);
-    
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    const openTimeMins = openH * 60 + openM;
-    let closeTimeMins = closeH * 60 + closeM;
-    
-    if (closeTimeMins < openTimeMins) {
-      closeTimeMins += 24 * 60; // Pasa la medianoche
-    }
-    
-    let currentCheckTime = currentTime;
-    if (currentTime < openTimeMins && currentTime < (closeH * 60 + closeM)) {
-       currentCheckTime += 24 * 60;
-    }
-
-    const isWithinHours = currentCheckTime >= openTimeMins && currentCheckTime <= closeTimeMins;
-    const openStatus = settings.is_store_open !== undefined ? settings.is_store_open : (isOpenDay && isWithinHours);
-
-    const formatTime = (h, m) => {
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const fh = h % 12 || 12;
-      return `${fh}:${m.toString().padStart(2, '0')} ${ampm}`;
-    };
-
-    return { 
-      isOpen: openStatus, 
-      closeTimeStr: formatTime(closeH, closeM),
-      openTimeStr: formatTime(openH, openM)
-    };
-  }, [settings]);
+  const isOpen = Boolean(horariosStatus?.isOpen);
+  const scheduleText = horariosStatus?.currentSchedule
+    ? `${String(horariosStatus.currentSchedule.open_time || '').slice(0, 5)}–${String(horariosStatus.currentSchedule.close_time || '').slice(0, 5)}`
+    : horariosStatus?.statusText;
 
   if (loading) {
     return (
@@ -429,14 +503,14 @@ function App() {
           </button>
           
           <div className="nav-logo">
-            <img src={logoImg} alt="Distrito BG" />
+            <img src={settings.logo || logoImg} alt={settings.restaurant_name || 'Distrito BG'} />
           </div>
           
           <div className={`nav-links ${isMobileMenuOpen ? 'open' : ''}`}>
             <a href="#" className="active" onClick={() => setIsMobileMenuOpen(false)}>INICIO</a>
             <a href="#" onClick={() => setIsMobileMenuOpen(false)}>MENÚ</a>
             <a href="#" onClick={() => setIsMobileMenuOpen(false)}>PROMOCIONES</a>
-            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>NOSOTROS</a>
+            <button className="tracking-nav-button" onClick={() => { setIsMobileMenuOpen(false); setIsTrackingOpen(true); }}>SEGUIR PEDIDO</button>
           </div>
           
           <div className="nav-status">
@@ -444,7 +518,7 @@ function App() {
               <span className="dot" style={{ backgroundColor: isOpen ? '#4ade80' : '#ff4757' }}></span>
               <div className="status-text-row">
                 <strong>{isOpen ? 'Abierto' : 'Cerrado'}</strong>
-                <span>{isOpen ? `Cierra a las ${closeTimeStr}` : `Abre a las ${openTimeStr}`}</span>
+                <span>{scheduleText}</span>
               </div>
             </div>
             <button className="desktop-cart-icon" onClick={() => setIsCartOpenMobile(true)}>
@@ -457,7 +531,8 @@ function App() {
         {/* Hero Banner */}
         <section className="hero-banner">
           <div className="hero-content">
-            <h1>MÁS QUE<br/><span className="highlight">HAMBURGUESAS,</span><br/>UNA EXPERIENCIA</h1>
+            <h1>{settings.restaurant_name || 'DISTRITO BG'}<br/><span className="highlight">MÁS QUE COMIDA,</span><br/>UNA EXPERIENCIA</h1>
+            {settings.welcome_message && <p className="hero-welcome">{settings.welcome_message}</p>}
             <div className="hero-features">
               <div className="feature"><span className="icon">🐄</span> CARNE<br/>100% RES</div>
               <div className="feature"><span className="icon">🥬</span> INGREDIENTES<br/>FRESCOS</div>
@@ -491,14 +566,16 @@ function App() {
         <div className="product-grid">
           {filteredProducts.map(product => {
             const cartItem = cart.find(i => i.id === product.id);
+            const soldOut = product.track_stock && Number(product.stock) <= 0;
             return (
-              <div key={product.id} className="product-card">
+              <div key={product.id} className={`product-card ${soldOut ? 'sold-out' : ''}`}>
                 <div className="product-image-container">
                   {product.image ? (
-                    <img src={product.image} alt={product.title} className="product-image" />
+                    <img src={product.image} alt={product.title} className="product-image" loading="lazy" decoding="async" />
                   ) : (
                     <div className="product-placeholder">Sin Imagen</div>
                   )}
+                  {soldOut && <span className="sold-out-label">AGOTADO</span>}
                 </div>
                 <div className="product-info">
                   <h3 className="product-title">{product.title}</h3>
@@ -537,8 +614,8 @@ function App() {
                         <button className="qty-btn-sm" onClick={() => updateQty(product.id, 1)}><Plus size={16}/></button>
                       </div>
                     ) : (
-                      <button className="add-btn" onClick={() => addToCart(product)}>
-                        + AGREGAR
+                      <button className="add-btn" onClick={() => addToCart(product)} disabled={soldOut || !isOpen}>
+                        {soldOut ? 'AGOTADO' : !isOpen ? 'FUERA DE HORARIO' : '+ AGREGAR'}
                       </button>
                     )}
                   </div>
@@ -578,6 +655,7 @@ function App() {
             </div>
           </div>
         </section>
+        <section className="storefront-info"><div><strong>{settings.restaurant_name || 'Distrito BG'}</strong><p>{settings.description || 'Pedidos preparados al momento.'}</p></div><div><span>{settings.address || 'Dirección por confirmar'}</span><a href={`tel:${settings.phone || settings.whatsapp_number || ''}`}>{settings.phone || settings.whatsapp_number || 'Contacto por WhatsApp'}</a><a href={`mailto:${settings.email || ''}`}>{settings.email || ''}</a></div></section>
           </div>
 
       {/* Sidebar / Cart Overlay para móviles */}
@@ -612,7 +690,7 @@ function App() {
                 cart.map(item => (
                   <div key={item.id} className="cart-item">
                     {item.image ? (
-                      <img src={item.image} alt={item.title} className="cart-item-img" />
+                      <img src={item.image} alt={item.title} className="cart-item-img" loading="lazy" decoding="async" />
                     ) : (
                       <div className="cart-item-img placeholder"></div>
                     )}
@@ -662,11 +740,34 @@ function App() {
 
               {customer.deliveryType === 'domicilio' && (
                 <>
+                  <DeliveryAddressPicker
+                    value={customer}
+                    onChange={updateDeliveryLocation}
+                    onAvailabilityChange={setMapsAvailable}
+                    apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}
+                    mapId={import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'}
+                  />
                   <div className="form-group">
-                    <input type="text" className="form-input" placeholder="Dirección completa" value={customer.address} onChange={e => setCustomer({...customer, address: e.target.value})} />
+                    <label htmlFor="delivery-barrio">Barrio</label>
+                    <input id="delivery-barrio" type="text" className="form-input" placeholder="Barrio" value={customer.barrio} onChange={e => setCustomer({...customer, barrio: e.target.value})} />
+                  </div>
+                  <div className="delivery-details-grid">
+                    <div className="form-group">
+                      <label htmlFor="delivery-apartment">Apartamento</label>
+                      <input id="delivery-apartment" type="text" className="form-input" placeholder="Ej. 302" value={customer.apartment} onChange={e => setCustomer({...customer, apartment: e.target.value})} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="delivery-tower">Torre</label>
+                      <input id="delivery-tower" type="text" className="form-input" placeholder="Ej. 2" value={customer.tower} onChange={e => setCustomer({...customer, tower: e.target.value})} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="delivery-floor">Piso</label>
+                      <input id="delivery-floor" type="text" className="form-input" placeholder="Ej. 3" value={customer.floor} onChange={e => setCustomer({...customer, floor: e.target.value})} />
+                    </div>
                   </div>
                   <div className="form-group">
-                    <input type="text" className="form-input" placeholder="Barrio" value={customer.barrio} onChange={e => setCustomer({...customer, barrio: e.target.value})} />
+                    <label htmlFor="delivery-reference">Referencia</label>
+                    <textarea id="delivery-reference" className="form-input delivery-reference-input" placeholder="Ej. portón negro, casa azul, frente al parque" value={customer.reference} onChange={e => setCustomer({...customer, reference: e.target.value})} />
                   </div>
                 </>
               )}
@@ -677,14 +778,14 @@ function App() {
 
               <h3 className="form-section-title">Forma de Pago</h3>
               <div className="radio-group">
-                <label className="radio-label">
+                {settings.payment_efectivo !== false && <label className="radio-label">
                   <input type="radio" name="payment" checked={customer.paymentMethod === 'efectivo'} onChange={() => setCustomer({...customer, paymentMethod: 'efectivo'})} />
                   Efectivo
-                </label>
-                <label className="radio-label">
+                </label>}
+                {(settings.payment_nequi || settings.payment_daviplata || settings.payment_transferencia || settings.payment_pse) && <label className="radio-label">
                   <input type="radio" name="payment" checked={customer.paymentMethod === 'transferencia'} onChange={() => setCustomer({...customer, paymentMethod: 'transferencia'})} />
                   Transferencia
-                </label>
+                </label>}
               </div>
 
               {customer.paymentMethod === 'efectivo' && (
@@ -698,14 +799,14 @@ function App() {
                   <p className="transfer-desc" style={{marginBottom: '10px', fontWeight: 'bold'}}>Selecciona el banco al que transferiste:</p>
                   
                   <div className="radio-group" style={{marginBottom: '15px'}}>
-                    <label className="radio-label">
+                    {settings.payment_nequi !== false && <label className="radio-label">
                       <input type="radio" name="transferBank" checked={customer.transferBank === 'nequi'} onChange={() => setCustomer({...customer, transferBank: 'nequi'})} />
                       Nequi
-                    </label>
-                    <label className="radio-label">
+                    </label>}
+                    {(settings.payment_transferencia || settings.bancolombia_number) && <label className="radio-label">
                       <input type="radio" name="transferBank" checked={customer.transferBank === 'banco'} onChange={() => setCustomer({...customer, transferBank: 'banco'})} />
                       Llave Bre-B
-                    </label>
+                    </label>}
                   </div>
 
                   {customer.transferBank === 'nequi' && (
@@ -771,10 +872,10 @@ function App() {
         <div className="premium-payment-methods" style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', marginTop: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', flexShrink: 0 }}>
           <h3 className="premium-payment-title" style={{ color: '#000' }}><CreditCard size={20} /> Paga como quieras</h3>
           <div className="payment-icons-grid">
-            <div className="payment-method-item" style={{ color: '#333' }}><Banknote className="payment-method-icon" size={20} /> Efectivo</div>
-            <div className="payment-method-item" style={{ color: '#333' }}><Smartphone className="payment-method-icon" size={20} /> Nequi</div>
-            <div className="payment-method-item" style={{ color: '#333' }}><Smartphone className="payment-method-icon" size={20} /> Daviplata</div>
-            <div className="payment-method-item" style={{ color: '#333' }}><Wallet className="payment-method-icon" size={20} /> Transferencia</div>
+            {settings.payment_efectivo !== false && <div className="payment-method-item" style={{ color: '#333' }}><Banknote className="payment-method-icon" size={20} /> Efectivo</div>}
+            {settings.payment_nequi !== false && <div className="payment-method-item" style={{ color: '#333' }}><Smartphone className="payment-method-icon" size={20} /> Nequi</div>}
+            {settings.payment_daviplata && <div className="payment-method-item" style={{ color: '#333' }}><Smartphone className="payment-method-icon" size={20} /> Daviplata</div>}
+            {settings.payment_transferencia && <div className="payment-method-item" style={{ color: '#333' }}><Wallet className="payment-method-icon" size={20} /> Transferencia</div>}
           </div>
 
           <div className="premium-trust-section" style={{ color: '#333', borderColor: '#eee' }}>
@@ -790,31 +891,39 @@ function App() {
       </main>
 
       {/* MODAL DE ANUNCIO */}
-      {isAnnouncementOpen && announcement && announcement.is_active && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ backgroundColor: '#111111', borderRadius: '24px', overflow: 'hidden', width: '100%', maxWidth: '400px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', border: '1px solid #333' }}>
+      {isAnnouncementOpen && announcement && announcement.is_visible !== false && (
+        <div className="announcement-overlay" role="presentation" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="announcement-panel" role="dialog" aria-modal="true" aria-labelledby="store-announcement-title" style={{ backgroundColor: '#111111', borderRadius: '24px', overflow: 'hidden', width: '100%', maxWidth: '400px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', border: '1px solid #333' }}>
             <button 
-              onClick={() => setIsAnnouncementOpen(false)}
+              className="announcement-close"
+              onClick={() => { markAnnouncementSeen(announcement); setIsAnnouncementOpen(false); }}
+              aria-label="Cerrar anuncio"
               style={{ position: 'absolute', top: '16px', right: '16px', width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', color: '#FFF', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
             >
               <X size={20} />
             </button>
             
             {announcement.image_url && (
-              <div style={{ flexShrink: 1, overflow: 'hidden', display: 'flex', justifyContent: 'center', backgroundColor: '#000' }}>
-                <img src={announcement.image_url} alt="Anuncio" style={{ width: '100%', height: 'auto', maxHeight: '55vh', objectFit: 'contain' }} />
+              <div className="announcement-media" style={{ flexShrink: 1, overflow: 'hidden', display: 'flex', justifyContent: 'center', backgroundColor: '#000' }}>
+                <img className="announcement-image" src={announcement.image_url} alt={announcement.title || 'Anuncio'} decoding="async" style={{ width: '100%', height: 'auto', maxHeight: '55vh', objectFit: 'contain' }} />
               </div>
             )}
             
-            <div style={{ padding: '24px', textAlign: 'center', overflowY: 'auto' }}>
-              <h3 style={{ margin: '0 0 16px 0', color: '#FFFFFF', fontSize: '24px', fontWeight: '800' }}>
+            <div className="announcement-content" style={{ padding: '24px', textAlign: 'center', overflowY: 'auto' }}>
+              <h3 id="store-announcement-title" className="announcement-title" style={{ margin: '0 0 12px 0', color: '#FFFFFF', fontSize: '24px', fontWeight: '800' }}>
                 {announcement.title}
               </h3>
+              {announcement.body && <p className="announcement-body">{announcement.body}</p>}
               <button 
-                onClick={() => setIsAnnouncementOpen(false)}
+                className="announcement-action"
+                onClick={() => {
+                  markAnnouncementSeen(announcement);
+                  setIsAnnouncementOpen(false);
+                  if (announcement.cta_url) window.location.assign(announcement.cta_url);
+                }}
                 style={{ backgroundColor: '#D4A017', color: '#000', border: 'none', borderRadius: '12px', padding: '14px 24px', fontWeight: '700', fontSize: '16px', width: '100%', cursor: 'pointer' }}
               >
-                Continuar
+                {announcement.cta_label || 'Continuar'}
               </button>
             </div>
           </div>
@@ -823,32 +932,34 @@ function App() {
 
       {/* MODAL DE INSTALACIÓN PWA */}
       {showInstallBanner && (
-        <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 40px)', maxWidth: '400px', backgroundColor: '#111', borderRadius: '16px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)', border: '1px solid #D4A017', zIndex: 10000, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <img src={logoImg} alt="Logo" style={{ width: '48px', height: '48px', objectFit: 'contain', backgroundColor: '#000', borderRadius: '12px', padding: '4px' }} />
+        <div className="install-banner" style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 40px)', maxWidth: '400px', backgroundColor: '#111', borderRadius: '16px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)', border: '1px solid #D4A017', zIndex: 10000, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="install-banner-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="install-banner-brand" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <img src={settings.logo || logoImg} alt="Logo" style={{ width: '48px', height: '48px', objectFit: 'contain', backgroundColor: '#000', borderRadius: '12px', padding: '4px' }} />
               <div>
                 <h3 style={{ margin: 0, color: '#FFF', fontSize: '18px', fontWeight: '800' }}>Instala nuestra App</h3>
                 <p style={{ margin: '4px 0 0 0', color: '#BDBDBD', fontSize: '14px' }}>Pide más rápido y seguro</p>
               </div>
             </div>
-            <button onClick={() => setShowInstallBanner(false)} style={{ background: 'transparent', border: 'none', color: '#BDBDBD', cursor: 'pointer', padding: '0' }}>
+            <button className="install-banner-close" aria-label="Cerrar instalación" onClick={() => setShowInstallBanner(false)} style={{ background: 'transparent', border: 'none', color: '#BDBDBD', cursor: 'pointer', padding: '0' }}>
               <X size={24} />
             </button>
           </div>
           {isIOS ? (
-            <div style={{ backgroundColor: '#1A1A1A', padding: '12px', borderRadius: '8px', fontSize: '13px', color: '#FFF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="install-banner-hint" style={{ backgroundColor: '#1A1A1A', padding: '12px', borderRadius: '8px', fontSize: '13px', color: '#FFF', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Share size={16} color="#D4A017" style={{flexShrink: 0}} />
               <span>Toca <b>Compartir</b> y luego <b>"Agregar a inicio"</b></span>
             </div>
           ) : (
-            <button onClick={handleInstallClick} style={{ backgroundColor: '#D4A017', color: '#000', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: '800', fontSize: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+            <button className="install-banner-action" onClick={handleInstallClick} style={{ backgroundColor: '#D4A017', color: '#000', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: '800', fontSize: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
               <Download size={20} />
               Instalar App
             </button>
           )}
         </div>
       )}
+
+      <OrderTracker open={isTrackingOpen} onClose={() => setIsTrackingOpen(false)} initialOrder={latestOrder} />
 
     </div>
   );
