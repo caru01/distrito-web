@@ -123,6 +123,15 @@ export default function OrderTracker({ open, onClose, initialOrder }) {
       <div className="tracker-summary"><div><span>Actualizado</span><strong>{new Date(order.updated_at || order.created_at).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}</strong></div><div><span>Total</span><strong>${Number(order.total).toLocaleString('es-CO')}</strong></div></div>
       <ul>{order.items.map((item, index) => <li key={`${item.title}-${index}`}><span>{item.quantity} × {item.title}</span></li>)}</ul>
       {initialOrder?.whatsappUrl && <a className="tracker-whatsapp" href={initialOrder.whatsappUrl} target="_blank" rel="noreferrer">Reenviar detalle por WhatsApp</a>}
+      {finalStatuses.has(status) && token && (
+        <button type="button" style={{ width: '100%', marginTop: '1rem', padding: '12px', background: '#2a2a2a', color: '#fff', border: '1px solid #333', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => {
+          localStorage.removeItem('distrito_latest_order');
+          setToken('');
+          setOrderId('');
+          setPhone('');
+          setOrder(null);
+        }}>Consultar otro pedido</button>
+      )}
     </div>}
   </section></div>;
 }

@@ -396,46 +396,36 @@ function App() {
     const phoneCode = customer.phone.replace(/\D/g, '').slice(-4);
     const trackingUrl = `https://www.distritobg.app/rastrear/${dbOrderId}?c=${phoneCode}`;
 
-    let message = `*NUEVA ORDEN (#${orderNumber})*\n`;
+    let message = `*NUEVA ORDEN (#${orderNumber})* 🔔\n`;
     
     if (customer.deliveryType === 'domicilio') {
-      message += `Hola Distrito BG soy ${customer.name}, me gustaría hacer un pedido\n\n`;
-      message += `*Cliente:* ${customer.name}\n`;
-      message += `*Teléfono:* ${customer.phone}\n`;
+      message += `Hola Distrito BG soy *${customer.name}*, me gustaría hacer un pedido. 🍔\n\n`;
+      message += `*Cliente:* 👤 ${customer.name}\n`;
+      message += `*Teléfono:* 📱 ${customer.phone}\n`;
       message += `*Entrega:* 🛵 A Domicilio\n`;
-      message += `*Dirección:* ${customer.address}\n`;
-      message += `*Barrio:* ${customer.barrio}\n`;
-      message += `*Rastrear pedido:* ${trackingUrl}\n\n`;
-      if (customer.apartment) message += `*Apartamento:* ${customer.apartment}\n`;
-      if (customer.tower) message += `*Torre:* ${customer.tower}\n`;
-      if (customer.floor) message += `*Piso:* ${customer.floor}\n`;
-      if (customer.latitude != null && customer.longitude != null) {
-        message += `*Ubicación exacta:* https://www.google.com/maps?q=${customer.latitude},${customer.longitude}\n\n`;
-      }
+      message += `*Dirección:* 📍 ${customer.address}\n`;
+      message += `*Barrio:* 🏘️ ${customer.barrio}\n`;
+      message += `*Rastrear pedido:* 🔗 ${trackingUrl}\n\n`;
+      if (customer.apartment) message += `*Apartamento:* 🏢 ${customer.apartment}\n`;
+      if (customer.tower) message += `*Torre:* 🏢 ${customer.tower}\n`;
+      if (customer.floor) message += `*Piso:* 🏢 ${customer.floor}\n`;
+
     } else {
-      message += `Hola Distrito BG soy ${customer.name}, me gustaría hacer un pedido para recoger en el local\n\n`;
-      message += `*Cliente:* ${customer.name}\n`;
-      message += `*Teléfono:* ${customer.phone}\n`;
+      message += `Hola Distrito BG soy *${customer.name}*, me gustaría hacer un pedido para recoger en el local. 🍔\n\n`;
+      message += `*Cliente:* 👤 ${customer.name}\n`;
+      message += `*Teléfono:* 📱 ${customer.phone}\n`;
       message += `*Entrega:* 🏪 Recoger Local\n\n`;
     }
     
-    message += `*Detalle del pedido:*\n`;
+    message += `*Detalle del pedido:* 🛒\n`;
     cart.forEach(item => {
       message += `- ${item.qty}x ${item.title} (${formatter.format(item.price * item.qty)})\n`;
     });
     
     if (customer.comment) {
-      message += `*Comentarios:* ${customer.comment}\n`;
+      message += `*Comentarios:* 📝 ${customer.comment}\n`;
     }
     if (customer.reference) {
-      message += `*Referencia:* ${customer.reference}\n`;
-    }
-    
-    message += `\n*Medio de Pago:* ${customer.paymentMethod === 'efectivo' ? '💵 Efectivo' : '💳 Transferencia'}\n`;
-    
-    if (customer.paymentMethod === 'efectivo') {
-      message += `*Paga con:* ${formatter.format(customer.cashAmount)}\n`;
-      const change = customer.cashAmount - subtotal;
       message += `*Cambio sugerido:* ${change > 0 ? formatter.format(change) : '$0'}\n`;
     } else {
       const isNequi = customer.transferBank === 'nequi';
