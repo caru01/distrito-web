@@ -392,10 +392,9 @@ function App() {
       return;
     }
 
-    const trackingUrlObject = new URL(window.location.origin);
-    trackingUrlObject.searchParams.set('pedido', dbOrderId);
-    trackingUrlObject.searchParams.set('seguimiento', trackingToken);
-    const trackingUrl = trackingUrlObject.toString();
+    // URL corta de rastreo: /rastrear/ID?c=últimos4dígitosTel
+    const phoneCode = customer.phone.replace(/\D/g, '').slice(-4);
+    const trackingUrl = `https://www.distritobg.app/rastrear/${dbOrderId}?c=${phoneCode}`;
 
     let message = `*NUEVA ORDEN (#${orderNumber})*\n`;
     
@@ -406,7 +405,7 @@ function App() {
       message += `*Entrega:* 🛵 A Domicilio\n`;
       message += `*Dirección:* ${customer.address}\n`;
       message += `*Barrio:* ${customer.barrio}\n`;
-      message += `*Seguimiento temporal:* ${trackingUrl}\n\n`;
+      message += `*Rastrear pedido:* ${trackingUrl}\n\n`;
       if (customer.apartment) message += `*Apartamento:* ${customer.apartment}\n`;
       if (customer.tower) message += `*Torre:* ${customer.tower}\n`;
       if (customer.floor) message += `*Piso:* ${customer.floor}\n`;
