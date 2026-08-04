@@ -4,7 +4,7 @@ import logoImg from './assets/logo-horizontal.png';
 
 import { API_URL } from './config/api';
 import OrderTracker from './components/OrderTracker';
-import { DeliveryAddressPicker } from '@distrito/shared-ui';
+import DeliveryAddressPicker from './components/DeliveryAddressPicker.jsx';
 import { applyWebTheme } from './utils/theme';
 
 function announcementStorageKey(announcement) {

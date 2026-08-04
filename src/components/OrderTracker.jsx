@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle, Clock, MapPin, PackageCheck, Search, Truck, X } from 'lucide-react';
-import { LiveDeliveryMap } from '@distrito/shared-ui';
+import LiveDeliveryMap from './LiveDeliveryMap.jsx';
 import { API_URL } from '../config/api';
 
 const STEPS = ['Nuevo', 'En preparación', 'Listo', 'En camino', 'Entregado'];
