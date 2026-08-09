@@ -11,4 +11,13 @@ export function applyWebTheme(settings = {}) {
   Object.entries(values).forEach(([property, value]) => {
     if (HEX.test(String(value || ''))) document.documentElement.style.setProperty(property, value);
   });
+  const fonts = {
+    modern: "'Montserrat', 'Inter', sans-serif",
+    friendly: "'Poppins', 'Nunito', sans-serif",
+    classic: "Georgia, 'Times New Roman', serif",
+    system: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+  };
+  document.documentElement.style.setProperty('--app-font', fonts[settings.web_font_family] || fonts.modern);
+  document.documentElement.dataset.cardStyle = settings.web_card_style || 'rounded';
+  document.title = settings.web_page_title || settings.restaurant_name || 'Distrito BG';
 }

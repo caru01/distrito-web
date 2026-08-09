@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle, Clock, MapPin, PackageCheck, Truck, AlertCircle, Package, RefreshCw } from 'lucide-react';
-import LiveDeliveryMap from '../components/LiveDeliveryMap.jsx';
-import { API_URL } from '../config/api';
+import { API_URL } from './config/api';
+import { LiveDeliveryMap, orderStatusLabel, orderStatusMeta, orderSteps } from '@distrito/shared-ui';
 
-const STEPS = ['Nuevo', 'En preparación', 'Listo', 'En camino', 'Entregado'];
 const finalStatuses = new Set(['Entregado', 'Completado', 'Cancelado']);
 
 function durationLabel(seconds) {
@@ -15,16 +14,7 @@ function durationLabel(seconds) {
 }
 
 function statusColor(status) {
-  const map = {
-    'Nuevo': '#D4A017',
-    'En preparación': '#60A5FA',
-    'Listo': '#4ADE80',
-    'En camino': '#FBBF24',
-    'Entregado': '#4ADE80',
-    'Completado': '#4ADE80',
-    'Cancelado': '#F87171',
-  };
-  return map[status] || '#BDBDBD';
+  return orderStatusMeta(status).color;
 }
 
 /** Lee ?c=XXXX de la URL */
@@ -88,7 +78,7 @@ export default function Rastrear() {
   // SSE para ubicación en tiempo real cuando está "En camino"
   useEffect(() => {
     if (!order || finalStatuses.has(order.order_status)) return undefined;
-    const stream = new EventSource(`${API_URL}/track/${order.id}/stream?phone=${encodeURIComponent('')}`);
+    const stream = new EventSource(`${API_URL}/track/${order.id}/stream?c=${encodeURIComponent(code)}`);
     const updateDriverLocation = (event) => {
       try {
         const data = JSON.parse(event.data || '{}');
@@ -117,12 +107,15 @@ export default function Rastrear() {
     ['order_updated', 'order_assigned'].forEach((ev) => stream.addEventListener(ev, () => fetch_({ silent: true })));
     stream.addEventListener('delivery_location', updateDriverLocation);
     return () => stream.close();
-  }, [order?.id, order?.order_status, fetch_]);
+  }, [order?.id, order?.order_status, code, fetch_]);
 
   const status = order?.order_status;
   const deliveryStatus = order?.delivery_status;
-  const currentIndex = status === 'Completado' ? 4 : STEPS.indexOf(status);
+  const steps = orderSteps(order?.delivery_type, order?.delivery_provider_type);
+  const currentIndex = status === 'Completado' ? steps.length - 1 : steps.indexOf(status);
+  const displayedStatus = orderStatusLabel(status, order?.delivery_type);
   const hasDriverLocation = order?.driver?.latitude != null && order?.driver?.longitude != null;
+  const isExternalDelivery = String(order?.delivery_provider_type || '').startsWith('external_');
   const deliveredDuration = durationLabel(order?.delivery_duration_seconds);
   const isFinal = finalStatuses.has(status);
 
@@ -209,7 +202,7 @@ export default function Rastrear() {
                 <div style={{ fontSize: 13, color: '#BDBDBD', fontWeight: 600 }}>Pedido</div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF' }}>#{order.id}</div>
                 <div style={{ fontSize: 13, color: '#BDBDBD', marginTop: 4 }}>
-                  {new Date(order.created_at).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}
+                  {new Date(order.created_at).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' })}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -218,7 +211,7 @@ export default function Rastrear() {
                   color: statusColor(status),
                   padding: '8px 16px', borderRadius: 999, fontSize: 14, fontWeight: 700,
                 }}>
-                  {status}
+                  {displayedStatus}
                 </span>
                 {status === 'Entregado' && deliveredDuration && (
                   <div style={{ color: '#4ADE80', fontSize: 12, marginTop: 6 }}>
@@ -229,7 +222,7 @@ export default function Rastrear() {
             </div>
 
             {/* Mapa en vivo — solo cuando está en camino */}
-            {deliveryStatus === 'En camino' && (
+            {deliveryStatus === 'En camino' && !isExternalDelivery && hasDriverLocation && (
               <div style={{ borderRadius: 20, overflow: 'hidden', border: '1px solid #1E1E1E' }}>
                 <div style={{ backgroundColor: '#111', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#4ADE80', display: 'inline-block', boxShadow: '0 0 0 4px rgba(74,222,128,0.2)', animation: 'pulse 1.5s infinite' }} />
@@ -253,7 +246,7 @@ export default function Rastrear() {
                   apiKey={typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GOOGLE_MAPS_API_KEY || '' : ''}
                   mapId={typeof import.meta !== 'undefined' ? import.meta.env?.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID' : 'DEMO_MAP_ID'}
                   store={order.store}
-                  destination={order.destination}
+                  destinations={order.destination ? [order.destination] : []}
                   drivers={liveDrivers}
                   trail={order.driver?.trail || []}
                   selectedDriverId={liveDrivers[0]?.id || null}
@@ -270,6 +263,17 @@ export default function Rastrear() {
               </div>
             )}
 
+            {isExternalDelivery && (
+              <div style={{ backgroundColor: '#111111', borderRadius: 20, padding: '20px 22px', border: '1px solid rgba(14,165,233,.35)', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                <Truck size={24} color="#38BDF8" style={{ flex: '0 0 auto' }}/>
+                <div><strong style={{ color: '#FFFFFF', display: 'block', marginBottom: 5 }}>Tu pedido está siendo entregado por un operador logístico aliado.</strong><span style={{ color: '#BDBDBD', fontSize: 13 }}>{order.external_delivery?.company_name ? `Operador: ${order.external_delivery.company_name}. ` : ''}{order.external_delivery?.eta_minutes ? `Tiempo estimado: ${order.external_delivery.eta_minutes} minutos.` : 'Consulta el avance confirmado en la línea de estados.'}</span><small style={{ display: 'block', color: '#6B7280', marginTop: 7 }}>Este operador no comparte GPS con Distrito BG; por eso no mostramos una ubicación simulada.</small></div>
+              </div>
+            )}
+
+            {deliveryStatus === 'En camino' && !isExternalDelivery && !hasDriverLocation && (
+              <div style={{ backgroundColor: '#111111', borderRadius: 20, padding: '18px 22px', border: '1px solid #1E1E1E', color: '#BDBDBD', display: 'flex', gap: 12, alignItems: 'center' }}><MapPin size={22} color="#D4A017"/><span>El domiciliario va en camino. El mapa aparecerá cuando recibamos una señal GPS real.</span></div>
+            )}
+
             {/* Timeline de estados */}
             {status !== 'Cancelado' ? (
               <div style={{ backgroundColor: '#111111', borderRadius: 20, padding: '24px', border: '1px solid #1E1E1E' }}>
@@ -279,10 +283,10 @@ export default function Rastrear() {
                   <div style={{ position: 'absolute', top: 18, left: '10%', right: '10%', height: 2, backgroundColor: '#1E1E1E', zIndex: 0 }} />
                   <div style={{
                     position: 'absolute', top: 18, left: '10%', height: 2,
-                    width: `${Math.max(0, currentIndex / (STEPS.length - 1)) * 80}%`,
+                    width: `${Math.max(0, currentIndex / (steps.length - 1)) * 80}%`,
                     backgroundColor: '#D4A017', zIndex: 1, transition: 'width 0.5s ease',
                   }} />
-                  {STEPS.map((step, index) => {
+                  {steps.map((step, index) => {
                     const done = index <= currentIndex;
                     const current = index === currentIndex;
                     return (
@@ -296,13 +300,13 @@ export default function Rastrear() {
                           transition: 'all 0.3s',
                         }}>
                           {index < currentIndex ? <CheckCircle size={16} />
-                            : index === 3 ? <Truck size={16} />
-                            : index === 4 ? <MapPin size={16} />
-                            : index === 2 ? <PackageCheck size={16} />
+                            : step === 'En camino' ? <Truck size={16} />
+                            : step === 'Entregado' ? <MapPin size={16} />
+                            : step === 'Listo' ? <PackageCheck size={16} />
                             : <Clock size={16} />}
                         </div>
                         <span style={{ fontSize: 11, color: done ? '#FFFFFF' : '#4A4A4A', fontWeight: done ? 600 : 400, textAlign: 'center' }}>
-                          {step}
+                          {orderStatusLabel(step, order.delivery_type)}
                         </span>
                       </div>
                     );
@@ -336,7 +340,7 @@ export default function Rastrear() {
             {/* Última actualización */}
             {lastRefresh && (
               <div style={{ textAlign: 'center', fontSize: 12, color: '#4A4A4A' }}>
-                Actualizado: {lastRefresh.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+                Actualizado: {lastRefresh.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: 'America/Bogota' })}
                 {!isFinal && ' · Se actualiza cada 30 segundos'}
               </div>
             )}

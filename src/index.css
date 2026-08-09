@@ -26,6 +26,7 @@ html, body {
 }
 
 body {
+  font-family: var(--app-font, 'Montserrat', 'Inter', sans-serif);
   background-color: var(--bg-color);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
@@ -1440,6 +1441,20 @@ svg {
   max-width: 100%;
 }
 
+.product-card[role="button"] { cursor: pointer; }
+.product-card[role="button"]:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+html[data-card-style="compact"] .product-card { border-radius: 10px; }
+html[data-card-style="compact"] .product-info { padding: 14px; }
+html[data-card-style="outlined"] .product-card { border: 2px solid color-mix(in srgb, var(--primary-color) 45%, #333); border-radius: 14px; box-shadow: none; }
+.announcement-banner .announcement-panel { max-width: min(960px, calc(100vw - 2rem)) !important; margin-top: 1rem; }
+.announcement-banner { pointer-events: none; background: transparent !important; }
+.announcement-banner .announcement-panel { pointer-events: auto; }
+@media (min-width: 700px) {
+  .announcement-banner .announcement-panel { flex-direction: row !important; }
+  .announcement-banner .announcement-media { width: min(34%, 300px); }
+  .announcement-banner .announcement-content { flex: 1; text-align: left !important; }
+}
+
 .delivery-address-picker {
   display: grid;
   gap: 0.8rem;
@@ -1708,6 +1723,13 @@ svg {
 .tracker-live-map { display: grid; gap: .75rem; margin-top: 1rem; padding: .8rem; border: 1px solid color-mix(in srgb, var(--primary-color) 32%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--primary-color) 7%, transparent); }
 .tracker-live-map .live-delivery-map-shell { min-height: clamp(300px, 48vh, 430px); }
 .tracker-live-map > small { color: #b8b8b8; font-size: .72rem; }
+.tracker-external-delivery { display:flex; align-items:flex-start; gap:.8rem; margin-top:1rem; padding:1rem; border:1px solid rgba(14,165,233,.38); border-radius:14px; background:rgba(14,165,233,.08); color:#fff; }
+.tracker-external-delivery > svg { flex:0 0 auto; color:#38bdf8; }
+.tracker-external-delivery > div { display:grid; gap:.35rem; }
+.tracker-external-delivery small { color:#c5c5c5; line-height:1.45; }
+.tracker-external-delivery em { color:#777; font-size:.72rem; font-style:normal; }
+.tracker-gps-waiting { border-color:rgba(212,160,23,.32); background:rgba(212,160,23,.07); }
+.tracker-gps-waiting > svg { color:var(--primary-color); }
 @media (max-width: 700px) { .tracker-form { grid-template-columns: 1fr; } .tracker-timeline { overflow-x: auto; min-width: 520px; } .tracker-result { overflow-x: hidden; } .storefront-info { flex-direction: column; } .storefront-info > div:last-child { text-align: left; } }
 @media (max-width: 700px) { .tracker-live-map .live-delivery-map-shell { min-height: 320px; } .tracker-panel { border-radius: 18px; } }
 

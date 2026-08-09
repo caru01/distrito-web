@@ -4,7 +4,7 @@ import logoImg from './assets/logo-horizontal.png';
 
 import { API_URL } from './config/api';
 import OrderTracker from './components/OrderTracker';
-import DeliveryAddressPicker from './components/DeliveryAddressPicker.jsx';
+import { buildNewOrderWhatsAppMessage, createWhatsAppUrl, DeliveryAddressPicker } from '@distrito/shared-ui';
 import { applyWebTheme } from './utils/theme';
 
 function announcementStorageKey(announcement) {
@@ -28,6 +28,11 @@ function markAnnouncementSeen(announcement) {
   const key = announcementStorageKey(announcement);
   if (announcement.display_frequency === 'daily') localStorage.setItem(key, colombiaDay());
   else if (announcement.display_frequency !== 'always') sessionStorage.setItem(key, 'seen');
+}
+
+function recordAnnouncement(id, action) {
+  if (!id) return;
+  fetch(`${API_URL}/announcements/${id}/${action}`, { method: 'POST', keepalive: true }).catch(() => {});
 }
 
 function trackingOrderFromUrl() {
@@ -202,10 +207,14 @@ function App() {
             paymentMethod: data.settings?.payment_efectivo === false ? 'transferencia' : current.paymentMethod,
             transferBank: data.settings?.payment_nequi === false ? 'banco' : current.transferBank,
           }));
-          if (shouldShowAnnouncement(data.announcement)) {
-            setAnnouncement(data.announcement);
-            setIsAnnouncementOpen(true);
-          }
+          const returning = localStorage.getItem('distrito_latest_order') ? '1' : '0';
+          fetch(`${API_URL}/announcement?returning=${returning}`).then((response) => response.json()).then((campaign) => {
+            if (shouldShowAnnouncement(campaign.announcement)) {
+              setAnnouncement(campaign.announcement);
+              setIsAnnouncementOpen(true);
+              recordAnnouncement(campaign.announcement.id, 'view');
+            }
+          }).catch(() => {});
         }
         setLoading(false);
       })
@@ -314,6 +323,8 @@ function App() {
   const removeItem = (id) => setCart(prev => prev.filter(item => item.id !== id));
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const deliveryFee = customer.deliveryType === 'domicilio' ? Math.max(0, Number(settings.delivery_cost || 0)) : 0;
+  const orderTotal = subtotal + deliveryFee;
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
@@ -350,6 +361,10 @@ function App() {
       alert("Por favor ingresa con cuánto vas a pagar.");
       return;
     }
+    if (customer.paymentMethod === 'efectivo' && Number(customer.cashAmount) < orderTotal) {
+      alert(`El valor con el que pagas debe cubrir el total de ${formatter.format(orderTotal)}.`);
+      return;
+    }
 
     let whatsappWindow = null;
     try {
@@ -363,8 +378,11 @@ function App() {
     const phoneNumber = settings.whatsapp_number || "573000000000";
     
     let dbOrderId = null;
-    let orderNumber = "0000";
     let trackingToken = '';
+    let confirmedSubtotal = subtotal;
+    let confirmedDeliveryFee = deliveryFee;
+    let confirmedTotal = orderTotal;
+    let confirmedChange = customer.paymentMethod === 'efectivo' ? Math.max(0, Number(customer.cashAmount) - orderTotal) : 0;
 
     try {
       // 1. Enviar la orden al backend (Dashboard CRM/Ventas) y obtener el ID
@@ -382,8 +400,11 @@ function App() {
         throw new Error(data.error || data.message || 'El pedido no pudo ser confirmado');
       }
       dbOrderId = data.order_id;
-      orderNumber = String(dbOrderId).padStart(4, '0');
       trackingToken = data.tracking_token || '';
+      confirmedSubtotal = Number(data.subtotal ?? subtotal);
+      confirmedDeliveryFee = Number(data.delivery_fee ?? deliveryFee);
+      confirmedTotal = Number(data.total ?? orderTotal);
+      confirmedChange = Number(data.change_required ?? (customer.paymentMethod === 'efectivo' ? Math.max(0, Number(customer.cashAmount) - confirmedTotal) : 0));
       if (!trackingToken) throw new Error('No fue posible generar el seguimiento temporal del pedido');
     } catch (error) {
       whatsappWindow?.close();
@@ -396,54 +417,18 @@ function App() {
     const phoneCode = customer.phone.replace(/\D/g, '').slice(-4);
     const trackingUrl = `https://www.distritobg.app/rastrear/${dbOrderId}?c=${phoneCode}`;
 
-    let message = `*NUEVA ORDEN (#${orderNumber})*\n`;
-    
-    if (customer.deliveryType === 'domicilio') {
-      message += `Hola Distrito BG soy *${customer.name}*, me gustaría hacer un pedido.\n\n`;
-      message += `*Cliente:* ${customer.name}\n`;
-      message += `*Teléfono:* ${customer.phone}\n`;
-      message += `*Entrega:* A Domicilio\n`;
-      message += `*Dirección:* ${customer.address}\n`;
-      message += `*Barrio:* ${customer.barrio}\n`;
-      message += `*Rastrear pedido:* ${trackingUrl}\n\n`;
-      if (customer.apartment) message += `*Apartamento:* ${customer.apartment}\n`;
-      if (customer.tower) message += `*Torre:* ${customer.tower}\n`;
-      if (customer.floor) message += `*Piso:* ${customer.floor}\n`;
-    } else {
-      message += `Hola Distrito BG soy *${customer.name}*, me gustaría hacer un pedido para recoger en el local.\n\n`;
-      message += `*Cliente:* ${customer.name}\n`;
-      message += `*Teléfono:* ${customer.phone}\n`;
-      message += `*Entrega:* Recoger Local\n\n`;
-    }
-    
-    message += `*Detalle del pedido:*\n`;
-    cart.forEach(item => {
-      message += `- ${item.qty}x ${item.title} (${formatter.format(item.price * item.qty)})\n`;
+    const message = buildNewOrderWhatsAppMessage({
+      orderId: dbOrderId,
+      customer,
+      items: cart,
+      trackingUrl,
+      subtotal: confirmedSubtotal,
+      deliveryFee: confirmedDeliveryFee,
+      total: confirmedTotal,
+      change: confirmedChange,
+      restaurantName: settings.restaurant_name || 'Distrito BG',
     });
-    
-    if (customer.comment) {
-      message += `*Comentarios:* ${customer.comment}\n`;
-    }
-    if (customer.reference) {
-      message += `*Referencia:* ${customer.reference}\n`;
-    }
-    
-    message += `\n*Medio de Pago:* ${customer.paymentMethod === 'efectivo' ? 'Efectivo' : 'Transferencia'}\n`;
-    if (customer.paymentMethod === 'efectivo') {
-      message += `*Paga con:* ${formatter.format(customer.cashAmount)}\n`;
-      const change = customer.cashAmount - subtotal;
-      message += `*Cambio sugerido:* ${change > 0 ? formatter.format(change) : '$0'}\n`;
-    } else {
-      const isNequi = customer.transferBank === 'nequi';
-      message += `*Banco:* ${isNequi ? 'Nequi' : 'Llave Bre-B'}\n`;
-      message += `*Número de cuenta:* ${isNequi ? settings.nequi_number : settings.bancolombia_number}\n`;
-    }
-
-    message += `*Total a pagar:* ${formatter.format(subtotal)}\n`;
-    message += `¡Gracias!`;
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    const whatsappUrl = createWhatsAppUrl(phoneNumber, message);
     
     const tracking = { id: dbOrderId, phone: customer.phone, token: trackingToken };
     localStorage.setItem('distrito_latest_order', JSON.stringify(tracking));
@@ -485,7 +470,7 @@ function App() {
             <span className="badge-count">{cartTotalItems}</span>
           </div>
           <span className="mobile-cart-bar-text">Ver pedido</span>
-          <span className="mobile-cart-bar-total">{formatter.format(subtotal)}</span>
+          <span className="mobile-cart-bar-total">{formatter.format(orderTotal)}</span>
         </div>
       )}
 
@@ -498,7 +483,7 @@ function App() {
           </button>
           
           <div className="nav-logo">
-            <img src={settings.logo || logoImg} alt={settings.restaurant_name || 'Distrito BG'} />
+            <img src={settings.web_logo || settings.logo || logoImg} alt={settings.restaurant_name || 'Distrito BG'} />
           </div>
           
           <div className={`nav-links ${isMobileMenuOpen ? 'open' : ''}`}>
@@ -526,7 +511,8 @@ function App() {
         {/* Hero Banner */}
         <section className="hero-banner">
           <div className="hero-content">
-            <h1>{settings.restaurant_name || 'DISTRITO BG'}<br/><span className="highlight">MÁS QUE COMIDA,</span><br/>UNA EXPERIENCIA</h1>
+            <h1>{settings.web_hero_title || `${settings.restaurant_name || 'DISTRITO BG'} · MÁS QUE COMIDA, UNA EXPERIENCIA`}</h1>
+            {settings.web_hero_subtitle && <p className="hero-welcome">{settings.web_hero_subtitle}</p>}
             {settings.welcome_message && <p className="hero-welcome">{settings.welcome_message}</p>}
             <div className="hero-features">
               <div className="feature"><span className="icon">🐄</span> CARNE<br/>100% RES</div>
@@ -563,7 +549,24 @@ function App() {
             const cartItem = cart.find(i => i.id === product.id);
             const soldOut = product.track_stock && Number(product.stock) <= 0;
             return (
-              <div key={product.id} className={`product-card ${soldOut ? 'sold-out' : ''}`}>
+              <div
+                key={product.id}
+                className={`product-card ${soldOut ? 'sold-out' : ''}`}
+                role="button"
+                tabIndex={soldOut || !isOpen ? -1 : 0}
+                aria-disabled={soldOut || !isOpen}
+                aria-label={`Agregar ${product.title} al pedido`}
+                onClick={(event) => {
+                  if (event.target.closest('button, a, input, .interactive-star')) return;
+                  if (!soldOut && isOpen) addToCart(product);
+                }}
+                onKeyDown={(event) => {
+                  if ((event.key === 'Enter' || event.key === ' ') && !soldOut && isOpen) {
+                    event.preventDefault();
+                    addToCart(product);
+                  }
+                }}
+              >
                 <div className="product-image-container">
                   {product.image ? (
                     <img src={product.image} alt={product.title} className="product-image" loading="lazy" decoding="async" />
@@ -828,9 +831,15 @@ function App() {
                 <span>Subtotal</span>
                 <span>{formatter.format(subtotal)}</span>
               </div>
+              {customer.deliveryType === 'domicilio' && (
+                <div className="cart-summary">
+                  <span>Domicilio</span>
+                  <span>{formatter.format(deliveryFee)}</span>
+                </div>
+              )}
               <div className="checkout-total">
                 <span>Total a Pagar</span>
-                <span>{formatter.format(subtotal)}</span>
+                <span>{formatter.format(orderTotal)}</span>
               </div>
               
               {checkoutStep === 1 ? (
@@ -887,7 +896,7 @@ function App() {
 
       {/* MODAL DE ANUNCIO */}
       {isAnnouncementOpen && announcement && announcement.is_visible !== false && (
-        <div className="announcement-overlay" role="presentation" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div className={`announcement-overlay announcement-${announcement.campaign_type || 'modal'}`} role="presentation" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: announcement.campaign_type === 'banner' ? 'flex-start' : 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="announcement-panel" role="dialog" aria-modal="true" aria-labelledby="store-announcement-title" style={{ backgroundColor: '#111111', borderRadius: '24px', overflow: 'hidden', width: '100%', maxWidth: '400px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', border: '1px solid #333' }}>
             <button 
               className="announcement-close"
@@ -913,6 +922,7 @@ function App() {
                 className="announcement-action"
                 onClick={() => {
                   markAnnouncementSeen(announcement);
+                  recordAnnouncement(announcement.id, 'click');
                   setIsAnnouncementOpen(false);
                   if (announcement.cta_url) window.location.assign(announcement.cta_url);
                 }}

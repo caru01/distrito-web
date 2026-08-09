@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import StoreFront from './App.jsx';
-import Rastrear from './pages/Rastrear.jsx';
+import Rastrear from './Rastrear.jsx';
 import './index.css';
 
 // Routing simple por path: /rastrear/:id → Rastrear, resto → StoreFront

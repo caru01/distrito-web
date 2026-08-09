@@ -7,7 +7,7 @@ carrito y envía pedidos a la API. No contiene rutas ni componentes administrati
 
 - Carga de productos activos, categorías, configuración y campaña vigente.
 - Filtrado de productos por categoría.
-- Carrito con cantidades y total visible para el usuario.
+- Carrito con cantidades, subtotal, costo de domicilio configurado y total visible.
 - Formulario de cliente, entrega y método de pago.
 - Autocompletado de direcciones con Google Places, mapa de confirmación y marcador
   movible orientado a Valledupar, Colombia.
@@ -154,6 +154,11 @@ La API resuelve esos valores desde PostgreSQL. El total mostrado en pantalla es 
 ayuda visual; el valor persistido lo calcula el backend. La tienda no inventa un
 número local: si la API no confirma la transacción, el pedido se detiene.
 
+La respuesta de checkout contiene `subtotal`, `delivery_fee` y `total`. Para
+recoger, el costo de domicilio es cero. Para domicilio, se usa el valor vigente de
+**Configuración → Domicilios**, incluso si la pantalla llevaba abierta antes de un
+cambio administrativo.
+
 ## Integraciones utilizadas
 
 | Ruta relativa | Uso |
@@ -179,6 +184,12 @@ Todas parten de `API_URL`.
 - El checkout no vuelve a enviar las imágenes almacenadas en el carrito.
 - El checkout abre primero el detalle de WhatsApp y deja preparada la pantalla de
   seguimiento para cuando el cliente regrese al navegador.
+- El mensaje cambia entre **Entrega a domicilio** y **Recoger en local**, incluye
+  productos, pago, cambio, total y enlace de rastreo. La URL se construye con
+  `encodeURIComponent`, por lo que conserva emojis y texto UTF-8.
+- Los pedidos para recoger muestran el flujo Pedido recibido → En preparación →
+  Listo para recoger → Entregado. Al marcar Listo, el ERP puede abrir el mensaje
+  específico de recogida para el cliente.
 - WhatsApp incluye debajo del barrio un enlace firmado de 48 horas como máximo. El
   estado final tiene 15 minutos de cortesía para mostrar “Entregado” y después el
   enlace deja de autorizar consultas; el acceso manual por pedido/teléfono continúa.
@@ -206,6 +217,16 @@ compacto (`901-1199 px`) y escritorio amplio (`>= 1200 px`).
   `100dvh` para dispositivos con barras o recortes de pantalla.
 - Se respeta `prefers-reduced-motion` para reducir animaciones cuando el sistema lo
   solicita.
+
+La tarjeta completa de un producto es accionable con clic, Enter o barra
+espaciadora. Los botones de cantidad y las estrellas detienen esa acción para no
+duplicar unidades. Cuando el restaurante está cerrado o no hay existencias, la
+tarjeta queda deshabilitada igual que el botón Agregar.
+
+La tienda aplica `web_logo`, nombre de página, título/subtítulo principal, paleta,
+tipografía y estilo de tarjetas desde Configuración. Las campañas consultan la
+audiencia anónima (nuevo o recurrente), respetan frecuencia y programación, y
+registran vista/clic sin almacenar identidad del visitante.
 
 No deben agregarse selectores `.admin-*` a esta hoja: los estilos del panel viven
 exclusivamente en `distrito-admin/src/styles/design-system.css`.
