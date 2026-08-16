@@ -430,22 +430,6 @@ function App() {
     });
     const whatsappUrl = createWhatsAppUrl(phoneNumber, message);
 
-    // ═══════════════════════════════════════════════════════════════
-    // [DIAGNÓSTICO TEMPORAL - BORRAR DESPUÉS DEL DEBUG]
-    // ═══════════════════════════════════════════════════════════════
-    (() => {
-      const encoded = encodeURIComponent(message);
-      console.group('%c[WHATSAPP DEBUG] Trazabilidad pre-navegación', 'color:orange;font-weight:bold');
-      console.log('MENSAJE ORIGINAL:', message);
-      console.log('CODES:', [...message].map(c => `U+${c.codePointAt(0).toString(16).toUpperCase()}`));
-      console.log('Contiene U+FFFD (\uFFFD):', message.includes('\uFFFD'));
-      console.log('URL ENCODED:', encoded);
-      console.log('Contiene %EF%BF%BD:', encoded.includes('%EF%BF%BD'));
-      console.log('URL FINAL:', whatsappUrl);
-      console.log('URL FINAL contiene %EF%BF%BD:', whatsappUrl.includes('%EF%BF%BD'));
-      console.groupEnd();
-    })();
-    // ═══════════════════════════════════════════════════════════════
 
     const tracking = { id: dbOrderId, phone: customer.phone, token: trackingToken };
     localStorage.setItem('distrito_latest_order', JSON.stringify(tracking));
