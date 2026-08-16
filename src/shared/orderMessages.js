@@ -83,19 +83,18 @@ export function buildNewOrderWhatsAppMessage({
     if (customer.tower) lines.push(`Torre: ${customer.tower}`);
     if (customer.floor) lines.push(`Piso: ${customer.floor}`);
     if (customer.reference) lines.push(`Referencia: ${customer.reference}`);
+    lines.push(`*Rastrear pedido:* ${WHATSAPP_ICONS.tracking} ${trackingUrl}`);
   } else {
     lines.push(
       `${WHATSAPP_ICONS.store} RECOGER EN LOCAL`,
       '',
       `${WHATSAPP_ICONS.pin} ${restaurantName}`,
       'Tu pedido estará disponible para recoger en nuestro establecimiento.',
+      `*Rastrear pedido:* ${WHATSAPP_ICONS.tracking} ${trackingUrl}`
     );
   }
 
   lines.push(
-    '',
-    `${WHATSAPP_ICONS.tracking} Rastrear pedido:`,
-    trackingUrl,
     '',
     `${WHATSAPP_ICONS.cart} Detalle del pedido`,
     '',
