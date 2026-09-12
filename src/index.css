@@ -1,4 +1,4 @@
-﻿.mobile-cart-bar { display: none; }
+.mobile-cart-bar { display: none; }
 :root {
   --primary-color: #ff4757;
   --primary-hover: #ff6b81;
@@ -212,7 +212,9 @@ body {
   display: flex;
   gap: 1rem;
   overflow-x: auto;
+  max-width: 100%;
   padding: 0.5rem 4rem 1.5rem;
+  scrollbar-width: thin;
 }
 
 .category-btn {
@@ -1078,6 +1080,7 @@ body {
   }
   .shop-products {
     flex: 1;
+    min-width: 0;
   }
   .product-grid {
     padding-right: 2rem;

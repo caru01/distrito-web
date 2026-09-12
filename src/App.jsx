@@ -654,8 +654,7 @@ function App() {
             </div>
           </div>
         </section>
-        <section className="storefront-info"><div><strong>{settings.restaurant_name || 'Distrito BG'}</strong><p>{settings.description || 'Pedidos preparados al momento.'}</p></div><div><span>{settings.address || 'Dirección por confirmar'}</span><a href={`tel:${settings.phone || settings.whatsapp_number || ''}`}>{settings.phone || settings.whatsapp_number || 'Contacto por WhatsApp'}</a><a href={`mailto:${settings.email || ''}`}>{settings.email || ''}</a></div></section>
-          </div>
+      </div>
 
       {/* Sidebar / Cart Overlay para móviles */}
       <div className={`cart-overlay ${isCartOpenMobile ? 'open' : ''}`} onClick={() => setIsCartOpenMobile(false)}></div>
