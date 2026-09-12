@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share } from 'lucide-react';
 import logoImg from './assets/logo-horizontal.png';
 
@@ -70,6 +70,34 @@ function App() {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+
+  // Categories drag-to-scroll refs
+  const categoriesRef = useRef(null);
+  const isDraggingCategories = useRef(false);
+  const startCategoriesX = useRef(0);
+  const scrollLeftCategories = useRef(0);
+  const draggedCategories = useRef(false);
+
+  const handleCategoriesMouseDown = (e) => {
+    isDraggingCategories.current = true;
+    draggedCategories.current = false;
+    startCategoriesX.current = e.pageX - (categoriesRef.current?.offsetLeft || 0);
+    scrollLeftCategories.current = categoriesRef.current?.scrollLeft || 0;
+  };
+
+  const handleCategoriesMouseMove = (e) => {
+    if (!isDraggingCategories.current || !categoriesRef.current) return;
+    const x = e.pageX - (categoriesRef.current?.offsetLeft || 0);
+    const walk = x - startCategoriesX.current;
+    if (Math.abs(walk) > 5) {
+      draggedCategories.current = true;
+      categoriesRef.current.scrollLeft = scrollLeftCategories.current - walk;
+    }
+  };
+
+  const handleCategoriesMouseUp = () => {
+    isDraggingCategories.current = false;
+  };
 
   useEffect(() => {
     // Detect iOS and Android
@@ -529,20 +557,30 @@ function App() {
         <div className="shop-layout">
           <div className="shop-products">
             {/* Categories */}
-            <div className="categories">
-          {categories.map(cat => {
-            return (
-              <button 
-                key={cat.id} 
-                className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
-                onClick={() => setActiveCategory(cat.id)}
-              >
-                <span className="cat-icon">{cat.iconStr || '🍔'}</span>
-                {cat.name.toUpperCase()}
-              </button>
-            )
-          })}
-        </div>
+            <div
+              className="categories"
+              ref={categoriesRef}
+              onMouseDown={handleCategoriesMouseDown}
+              onMouseMove={handleCategoriesMouseMove}
+              onMouseUp={handleCategoriesMouseUp}
+              onMouseLeave={handleCategoriesMouseUp}
+            >
+              {categories.map(cat => {
+                return (
+                  <button 
+                    key={cat.id} 
+                    className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
+                    onClick={() => {
+                      if (draggedCategories.current) return;
+                      setActiveCategory(cat.id);
+                    }}
+                  >
+                    <span className="cat-icon">{cat.iconStr || '🍔'}</span>
+                    {cat.name.toUpperCase()}
+                  </button>
+                )
+              })}
+            </div>
 
         {/* Product Grid */}
         <div className="product-grid">
