@@ -44,7 +44,7 @@ function trackingOrderFromUrl() {
 }
 
 function App() {
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('');
   const [cart, setCart] = useState([]);
   
   // Data from Backend
@@ -62,7 +62,20 @@ function App() {
   const [horariosStatus, setHorariosStatus] = useState({ isOpen: false, statusText: 'Consultando horario…' });
   const [isTrackingOpen, setIsTrackingOpen] = useState(() => Boolean(trackingOrderFromUrl()));
   const [latestOrder, setLatestOrder] = useState(() => {
-    try { return trackingOrderFromUrl() || JSON.parse(localStorage.getItem('distrito_latest_order') || 'null'); } catch { return null; }
+    try {
+      const fromUrl = trackingOrderFromUrl();
+      if (fromUrl) return fromUrl;
+      const raw = localStorage.getItem('distrito_latest_order');
+      if (!raw) return null;
+      const stored = JSON.parse(raw);
+      if (!stored?.timestamp || (Date.now() - stored.timestamp > 12 * 60 * 60 * 1000)) {
+        localStorage.removeItem('distrito_latest_order');
+        return null;
+      }
+      return stored;
+    } catch {
+      return null;
+    }
   });
   
   // Install Prompt State
@@ -300,9 +313,6 @@ function App() {
   const categories = useMemo(() => {
     let baseCategories = [];
     
-    // Icono para la categoría "Todos"
-    const allCategory = { id: 'all', name: 'Todos', iconStr: '📋' };
-    
     // Categoría "Destacados"
     const hasFeatured = products.some(p => p.is_featured);
     const featuredCategory = hasFeatured ? { id: 'featured', name: 'Destacados', iconStr: '⭐' } : null;
@@ -315,13 +325,23 @@ function App() {
     }
 
     if (featuredCategory) {
-      return [allCategory, featuredCategory, ...baseCategories];
+      return [featuredCategory, ...baseCategories];
     }
-    return [allCategory, ...baseCategories];
+    return baseCategories;
   }, [products, categoriesData]);
 
+  // Sincronizar categoría activa por defecto si no está seleccionada o ya no existe
+  useEffect(() => {
+    if (categories.length > 0) {
+      const exists = categories.some(c => c.id === activeCategory);
+      if (!exists) {
+        setActiveCategory(categories[0].id);
+      }
+    }
+  }, [categories, activeCategory]);
+
   const filteredProducts = useMemo(() => {
-    if (activeCategory === 'all') return products;
+    if (!activeCategory) return products;
     if (activeCategory === 'featured') return products.filter(p => p.is_featured);
     return products.filter(p => p.category === activeCategory);
   }, [activeCategory, products]);
@@ -459,7 +479,7 @@ function App() {
     const whatsappUrl = createWhatsAppUrl(phoneNumber, message);
 
 
-    const tracking = { id: dbOrderId, phone: customer.phone, token: trackingToken };
+    const tracking = { id: dbOrderId, phone: customer.phone, token: trackingToken, timestamp: Date.now() };
     localStorage.setItem('distrito_latest_order', JSON.stringify(tracking));
     setLatestOrder({ ...tracking, whatsappUrl });
     setCart([]);
@@ -519,7 +539,7 @@ function App() {
             <a href="#" className="active" onClick={() => setIsMobileMenuOpen(false)}>INICIO</a>
             <a href="#" onClick={() => setIsMobileMenuOpen(false)}>MENÚ</a>
             <a href="#" onClick={() => setIsMobileMenuOpen(false)}>PROMOCIONES</a>
-            <button className="tracking-nav-button" onClick={() => { setIsMobileMenuOpen(false); setIsTrackingOpen(true); }}>SEGUIR PEDIDO</button>
+            <button className="tracking-nav-button" onClick={() => { setIsMobileMenuOpen(false); setIsTrackingOpen(true); }}>RASTREAR PEDIDO</button>
           </div>
           
           <div className="nav-status">

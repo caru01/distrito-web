@@ -26,8 +26,15 @@ export default function OrderTracker({ open, onClose, initialOrder }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!initialOrder) return;
-    setOrderId(initialOrder.id);
+    if (!initialOrder) {
+      setOrderId('');
+      setPhone('');
+      setToken('');
+      setOrder(null);
+      setError('');
+      return;
+    }
+    setOrderId(initialOrder.id || '');
     setPhone(initialOrder.phone || '');
     setToken(initialOrder.token || '');
   }, [initialOrder]);
@@ -39,26 +46,50 @@ export default function OrderTracker({ open, onClose, initialOrder }) {
     try {
       const response = await fetch(`${API_URL}/track/${orderId}?${trackingQuery(token, phone)}`);
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'No encontramos el pedido');
+      if (!response.ok) {
+        if (token) {
+          try { localStorage.removeItem('distrito_latest_order'); } catch {}
+          setToken('');
+          if (!initialOrder?.fromLink) {
+            setOrder(null);
+            setError('');
+            return;
+          }
+        }
+        throw new Error(data.error || 'No encontramos el pedido');
+      }
       setOrder(data.order);
+      if (finalStatuses.has(data.order?.order_status)) {
+        try { localStorage.removeItem('distrito_latest_order'); } catch {}
+      }
     } catch (requestError) {
       if (!silent) {
         setOrder(null);
-        setError(requestError.message);
+        if (initialOrder?.fromLink || !token) {
+          setError(requestError.message);
+        } else {
+          try { localStorage.removeItem('distrito_latest_order'); } catch {}
+          setToken('');
+          setError('');
+        }
       }
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [orderId, phone, token]);
+  }, [orderId, phone, token, initialOrder?.fromLink]);
 
   useEffect(() => {
-    if (!open || !initialOrder) return undefined;
-    search();
+    if (!open) return undefined;
+    if (initialOrder && (token || (orderId && phone))) {
+      search();
+    }
     const timer = setInterval(() => {
-      if (document.visibilityState === 'visible' && !finalStatuses.has(order?.order_status)) search({ silent: true });
+      if (document.visibilityState === 'visible' && !finalStatuses.has(order?.order_status)) {
+        search({ silent: true });
+      }
     }, 30_000);
     return () => clearInterval(timer);
-  }, [initialOrder, open, order?.order_status, search]);
+  }, [initialOrder, open, order?.order_status, search, token, orderId, phone]);
 
   useEffect(() => {
     if (!open || !order || finalStatuses.has(order.order_status)) return undefined;
