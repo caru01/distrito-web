@@ -1,0 +1,431 @@
+/* =========================================================
+   SCHEDULE MODAL - DISTRITO WEB
+   Diseño de referencia: Tarjeta blanca, esquinas redondeadas,
+   sombra suave, selector circular por opción y responsive.
+   ========================================================= */
+
+/* Overlay de fondo */
+.schedule-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: scheduleFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scheduleFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Tarjeta principal */
+.schedule-modal-card {
+  background-color: #FFFFFF;
+  color: #1F2937;
+  width: 100%;
+  max-width: 440px;
+  border-radius: 20px;
+  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.25), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  position: relative;
+  transform-origin: center center;
+  animation: scheduleCardZoom 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scheduleCardZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Encabezado */
+.schedule-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #FFFFFF;
+}
+
+.schedule-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedule-brand-logo-container {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px solid #E5E7EB;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.schedule-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.schedule-brand-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-brand-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.schedule-brand-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.schedule-status-dot-sm {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10B981;
+}
+
+.schedule-status-dot-sm.closed {
+  background-color: #EF4444;
+}
+
+.schedule-modal-close-btn {
+  background: #F3F4F6;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4B5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.schedule-modal-close-btn:hover {
+  background: #E5E7EB;
+  color: #111827;
+  transform: scale(1.05);
+}
+
+/* Línea divisoria */
+.schedule-modal-divider {
+  height: 1px;
+  background-color: #E5E7EB;
+  width: 100%;
+  margin: 0;
+}
+
+/* Título de sección */
+.schedule-modal-subheader {
+  padding: 16px 20px 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.schedule-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1F2937;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-current-status-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.schedule-current-status-pill.open {
+  background-color: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+
+.schedule-current-status-pill.closed {
+  background-color: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+/* Lista de opciones / Tarjetas independientes */
+.schedule-options-list {
+  padding: 0 16px 16px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 52vh;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tarjeta individual de día */
+.schedule-day-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background-color: #FFFFFF;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  position: relative;
+}
+
+.schedule-day-card:hover {
+  border-color: #D1D5DB;
+  background-color: #FAFAFA;
+}
+
+/* Estado SELECCIONADO: Borde resaltado y fondo sutil */
+.schedule-day-card.selected {
+  border-color: #D4A017;
+  background-color: #FFFDF7;
+  box-shadow: 0 4px 12px rgba(212, 160, 23, 0.12);
+}
+
+/* Estado CERRADO / INACTIVO */
+.schedule-day-card.is-closed {
+  background-color: #F9FAFB;
+  opacity: 0.85;
+}
+
+.schedule-day-card.is-closed.selected {
+  background-color: #FFFDF7;
+  opacity: 1;
+}
+
+/* Contenido izquierdo: selector circular + datos */
+.schedule-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Selector circular (Radio visual) */
+.schedule-radio-outer {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #D1D5DB;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.schedule-day-card:hover .schedule-radio-outer {
+  border-color: #9CA3AF;
+}
+
+.schedule-day-card.selected .schedule-radio-outer {
+  border-color: #D4A017;
+  background-color: #FFFFFF;
+}
+
+.schedule-radio-inner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #D4A017;
+  transform: scale(0);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.schedule-day-card.selected .schedule-radio-inner {
+  transform: scale(1);
+}
+
+/* Textos de la tarjeta */
+.schedule-day-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.schedule-day-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-day-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.schedule-today-badge {
+  background-color: #D4A017;
+  color: #000000;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.schedule-day-hours {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #4B5563;
+  margin-top: 2px;
+}
+
+.schedule-day-hours.closed-text {
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+/* Lado derecho: Badges de estado */
+.schedule-card-right {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
+.schedule-status-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+
+.schedule-status-badge.open {
+  background-color: #F0FDF4;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.schedule-status-badge.closed {
+  background-color: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+/* Pie del modal */
+.schedule-modal-footer {
+  padding: 12px 20px;
+  background-color: #F9FAFB;
+  border-top: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.schedule-footer-info {
+  font-size: 0.78rem;
+  color: #6B7280;
+  line-height: 1.3;
+}
+
+.schedule-footer-info strong {
+  color: #111827;
+}
+
+.schedule-modal-done-btn {
+  background-color: #111827;
+  color: #FFFFFF;
+  border: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 8px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.schedule-modal-done-btn:hover {
+  background-color: #000000;
+  transform: translateY(-1px);
+}
+
+/* Responsive celular */
+@media (max-width: 480px) {
+  .schedule-modal-overlay {
+    padding: 12px;
+    align-items: flex-end; /* En móviles muy pequeños puede sentirse como bottom sheet o centrado */
+  }
+
+  .schedule-modal-card {
+    max-height: 85vh;
+    border-radius: 20px;
+  }
+
+  .schedule-options-list {
+    max-height: 48vh;
+    padding: 0 14px 14px 14px;
+    gap: 8px;
+  }
+
+  .schedule-day-card {
+    padding: 10px 12px;
+  }
+
+  .schedule-day-name {
+    font-size: 0.9rem;
+  }
+
+  .schedule-day-hours {
+    font-size: 0.78rem;
+  }
+}

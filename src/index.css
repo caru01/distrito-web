@@ -112,6 +112,14 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.status-indicator:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
 }
 
 .status-indicator .dot {

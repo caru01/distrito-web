@@ -4,6 +4,7 @@ import logoImg from './assets/logo-horizontal.png';
 
 import { API_URL } from './config/api';
 import OrderTracker from './components/OrderTracker';
+import ScheduleModal from './components/ScheduleModal';
 import { buildNewOrderWhatsAppMessage, createWhatsAppUrl, DeliveryAddressPicker } from '@distrito/shared-ui';
 import { applyWebTheme } from './utils/theme';
 
@@ -60,6 +61,7 @@ function App() {
   const [announcement, setAnnouncement] = useState(null);
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [horariosStatus, setHorariosStatus] = useState({ isOpen: false, statusText: 'Consultando horario…' });
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(() => Boolean(trackingOrderFromUrl()));
   const [latestOrder, setLatestOrder] = useState(() => {
     try {
@@ -539,11 +541,31 @@ function App() {
             <a href="#" className="active" onClick={() => setIsMobileMenuOpen(false)}>INICIO</a>
             <a href="#" onClick={() => setIsMobileMenuOpen(false)}>MENÚ</a>
             <a href="#" onClick={() => setIsMobileMenuOpen(false)}>PROMOCIONES</a>
+            <button 
+              type="button" 
+              className="tracking-nav-button" 
+              style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: '#FFF' }}
+              onClick={() => { setIsMobileMenuOpen(false); setIsScheduleModalOpen(true); }}
+            >
+              HORARIOS
+            </button>
             <button className="tracking-nav-button" onClick={() => { setIsMobileMenuOpen(false); setIsTrackingOpen(true); }}>RASTREAR PEDIDO</button>
           </div>
           
           <div className="nav-status">
-            <div className="status-indicator">
+            <div 
+              className="status-indicator"
+              role="button"
+              tabIndex={0}
+              title="Toca para ver los horarios de atención"
+              onClick={() => setIsScheduleModalOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsScheduleModalOpen(true);
+                }
+              }}
+            >
               <span className="dot" style={{ backgroundColor: isOpen ? '#4ade80' : '#ff4757' }}></span>
               <div className="status-text-row">
                 <strong>{isOpen ? 'Abierto' : 'Cerrado'}</strong>
@@ -777,8 +799,16 @@ function App() {
               </div>
 
               {!horariosStatus?.isOpen && (
-                <div style={{ backgroundColor: '#EF4444', color: '#FFF', padding: '16px', borderRadius: '12px', marginBottom: '24px', textAlign: 'center', fontWeight: '600' }}>
+                <div 
+                  onClick={() => setIsScheduleModalOpen(true)}
+                  style={{ backgroundColor: '#EF4444', color: '#FFF', padding: '16px', borderRadius: '12px', marginBottom: '24px', textAlign: 'center', fontWeight: '600', cursor: 'pointer' }}
+                  role="button"
+                  tabIndex={0}
+                >
                   Actualmente estamos cerrados. {horariosStatus?.currentSchedule ? `Nuestro horario hoy es de ${horariosStatus.currentSchedule.open_time} a ${horariosStatus.currentSchedule.close_time}.` : 'No hay atención el día de hoy.'}
+                  <div style={{ marginTop: '8px', fontSize: '0.85rem', textDecoration: 'underline', opacity: 0.95 }}>
+                    📅 Toca aquí para ver todos los horarios de atención
+                  </div>
                 </div>
               )}
 
@@ -1023,6 +1053,14 @@ function App() {
       )}
 
       <OrderTracker open={isTrackingOpen} onClose={() => setIsTrackingOpen(false)} initialOrder={latestOrder} />
+
+      <ScheduleModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        horariosStatus={horariosStatus}
+        settings={settings}
+        defaultLogo={logoImg}
+      />
 
     </div>
   );
