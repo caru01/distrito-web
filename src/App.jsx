@@ -228,9 +228,17 @@ function App() {
   const [copiedNequi, setCopiedNequi] = useState(false);
   const [copiedBanco, setCopiedBanco] = useState(false);
 
+  const hasAutoShownClosedModal = useRef(false);
+
   useEffect(() => {
     const refreshSchedule = () => fetch(`${API_URL}/horarios/status`)
-      .then(res => res.json()).then(data => setHorariosStatus(data))
+      .then(res => res.json()).then(data => {
+        setHorariosStatus(data);
+        if (data && data.isOpen === false && !hasAutoShownClosedModal.current) {
+          hasAutoShownClosedModal.current = true;
+          setIsScheduleModalOpen(true);
+        }
+      })
       .catch(() => setHorariosStatus({ isOpen: false, statusText: 'No fue posible validar el horario' }));
     refreshSchedule();
     const scheduleTimer = setInterval(refreshSchedule, 60_000);
@@ -541,26 +549,20 @@ function App() {
             <a href="#" className="active" onClick={() => setIsMobileMenuOpen(false)}>INICIO</a>
             <a href="#" onClick={() => setIsMobileMenuOpen(false)}>MENÚ</a>
             <a href="#" onClick={() => setIsMobileMenuOpen(false)}>PROMOCIONES</a>
-            <button 
-              type="button" 
-              className="tracking-nav-button" 
-              style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', color: '#FFF' }}
-              onClick={() => { setIsMobileMenuOpen(false); setIsScheduleModalOpen(true); }}
-            >
-              HORARIOS
-            </button>
             <button className="tracking-nav-button" onClick={() => { setIsMobileMenuOpen(false); setIsTrackingOpen(true); }}>RASTREAR PEDIDO</button>
           </div>
           
           <div className="nav-status">
             <div 
-              className="status-indicator"
-              role="button"
-              tabIndex={0}
-              title="Toca para ver los horarios de atención"
-              onClick={() => setIsScheduleModalOpen(true)}
+              className={`status-indicator ${!isOpen ? 'is-closed' : ''}`}
+              role={!isOpen ? 'button' : undefined}
+              tabIndex={!isOpen ? 0 : undefined}
+              title={!isOpen ? 'Restaurante cerrado. Toca para ver horarios' : undefined}
+              onClick={() => {
+                if (!isOpen) setIsScheduleModalOpen(true);
+              }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (!isOpen && (e.key === 'Enter' || e.key === ' ')) {
                   e.preventDefault();
                   setIsScheduleModalOpen(true);
                 }
@@ -590,7 +592,18 @@ function App() {
               <div className="feature"><span className="icon">🥬</span> INGREDIENTES<br/>FRESCOS</div>
               <div className="feature"><span className="icon">🔥</span> PREPARACIÓN<br/>AL MOMENTO</div>
             </div>
-            <button className="hero-btn">ORDENAR AHORA ➔</button>
+            <button 
+              className="hero-btn"
+              onClick={() => {
+                if (!isOpen) {
+                  setIsScheduleModalOpen(true);
+                } else {
+                  categoriesRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            >
+              ORDENAR AHORA ➔
+            </button>
           </div>
         </section>
 
@@ -639,12 +652,22 @@ function App() {
                 aria-label={`Agregar ${product.title} al pedido`}
                 onClick={(event) => {
                   if (event.target.closest('button, a, input, .interactive-star')) return;
-                  if (!soldOut && isOpen) addToCart(product);
+                  if (soldOut) return;
+                  if (!isOpen) {
+                    setIsScheduleModalOpen(true);
+                  } else {
+                    addToCart(product);
+                  }
                 }}
                 onKeyDown={(event) => {
-                  if ((event.key === 'Enter' || event.key === ' ') && !soldOut && isOpen) {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    if (soldOut) return;
                     event.preventDefault();
-                    addToCart(product);
+                    if (!isOpen) {
+                      setIsScheduleModalOpen(true);
+                    } else {
+                      addToCart(product);
+                    }
                   }
                 }}
               >
@@ -693,7 +716,17 @@ function App() {
                         <button className="qty-btn-sm" onClick={() => updateQty(product.id, 1)}><Plus size={16}/></button>
                       </div>
                     ) : (
-                      <button className="add-btn" onClick={() => addToCart(product)} disabled={soldOut || !isOpen}>
+                      <button 
+                        className="add-btn" 
+                        onClick={() => {
+                          if (!isOpen) {
+                            setIsScheduleModalOpen(true);
+                          } else {
+                            addToCart(product);
+                          }
+                        }} 
+                        disabled={soldOut}
+                      >
                         {soldOut ? 'AGOTADO' : !isOpen ? 'FUERA DE HORARIO' : '+ AGREGAR'}
                       </button>
                     )}

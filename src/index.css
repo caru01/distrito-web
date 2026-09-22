@@ -112,13 +112,16 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
   user-select: none;
 }
 
-.status-indicator:hover {
-  background: rgba(255, 255, 255, 0.18);
+.status-indicator.is-closed {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-indicator.is-closed:hover {
+  background: rgba(239, 68, 68, 0.22);
   transform: translateY(-1px);
 }
 
