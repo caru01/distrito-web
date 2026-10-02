@@ -26,16 +26,6 @@ export default function ScheduleModal({ isOpen, onClose, horariosStatus, setting
     }
   }, []);
 
-  // Día seleccionado (por defecto hoy)
-  const [selectedDay, setSelectedDay] = useState(todayName);
-
-  // Al abrir el modal, asegurar que el día seleccionado sea el día de hoy
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedDay(todayName);
-    }
-  }, [isOpen, todayName]);
-
   // Cerrar con tecla Escape en teclado físico / PC
   useEffect(() => {
     if (!isOpen) return;
@@ -140,24 +130,19 @@ export default function ScheduleModal({ isOpen, onClose, horariosStatus, setting
         {/* Lista de opciones / tarjetas independientes */}
         <div className="schedule-options-list">
           {daysList.map((day) => {
-            const isSelected = selectedDay === day.day_of_week;
             const isToday = todayName.localeCompare(day.day_of_week, 'es', { sensitivity: 'base' }) === 0;
             const isOpenDay = Boolean(day.is_active);
+            // El selector queda fijo en el día actual (Hoy), sin moverse al hacer clic en otro día
+            const isSelected = isToday;
+            // Solo dice "Abierto" si es el día de hoy y el restaurante está en horario de atención en este instante
+            const isCurrentlyOpen = isToday && isStoreCurrentlyOpen;
 
             return (
               <div
                 key={day.day_of_week}
                 className={`schedule-day-card ${isSelected ? 'selected' : ''} ${!isOpenDay ? 'is-closed' : ''}`}
-                role="radio"
-                aria-checked={isSelected}
-                tabIndex={0}
-                onClick={() => setSelectedDay(day.day_of_week)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setSelectedDay(day.day_of_week);
-                  }
-                }}
+                role="group"
+                aria-label={`Horario ${day.day_of_week}`}
               >
                 {/* Selector circular a la izquierda + nombre del día */}
                 <div className="schedule-card-left">
@@ -179,11 +164,13 @@ export default function ScheduleModal({ isOpen, onClose, horariosStatus, setting
                   </div>
                 </div>
 
-                {/* Badge de estado a la derecha */}
+                {/* Badge de estado a la derecha: únicamente visible en el día actual (Hoy) */}
                 <div className="schedule-card-right">
-                  <span className={`schedule-status-badge ${isOpenDay ? 'open' : 'closed'}`}>
-                    {isOpenDay ? 'Abierto' : 'Cerrado'}
-                  </span>
+                  {isToday ? (
+                    <span className={`schedule-status-badge ${isCurrentlyOpen ? 'open' : 'closed'}`}>
+                      {isCurrentlyOpen ? 'Abierto' : 'Cerrado'}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             );

@@ -216,15 +216,14 @@
   background-color: #FFFFFF;
   border: 1.5px solid #E5E7EB;
   border-radius: 14px;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
   position: relative;
 }
 
 .schedule-day-card:hover {
-  border-color: #D1D5DB;
-  background-color: #FAFAFA;
+  border-color: #E5E7EB;
 }
 
 /* Estado SELECCIONADO: Borde resaltado y fondo sutil */
