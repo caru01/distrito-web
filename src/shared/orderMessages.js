@@ -41,12 +41,12 @@ export function createWhatsAppUrl(phone, message) {
 
 function paymentLines({ paymentMethod, cashAmount, change, transferBank }) {
   const isCash = String(paymentMethod || '').toLowerCase() === 'efectivo';
-  const lines = [`${WHATSAPP_ICONS.card} Medio de pago: ${isCash ? 'Efectivo' : 'Transferencia'}`];
+  const lines = [`*Medio de Pago:* ${WHATSAPP_ICONS.card} ${isCash ? 'Efectivo' : 'Transferencia'}`];
   if (isCash) {
-    lines.push(`${WHATSAPP_ICONS.cash} Paga con: ${formatCop(cashAmount)}`);
-    lines.push(`${WHATSAPP_ICONS.change} Cambio: ${formatCop(change)}`);
+    lines.push(`*Paga con:* ${WHATSAPP_ICONS.cash} ${formatCop(cashAmount)}`);
+    lines.push(`*Cambio:* ${WHATSAPP_ICONS.change} ${formatCop(change)}`);
   } else if (transferBank) {
-    lines.push(`${WHATSAPP_ICONS.bank} Entidad: ${transferBank}`);
+    lines.push(`*Banco:* ${transferBank}`);
   }
   return lines;
 }
@@ -65,32 +65,33 @@ export function buildNewOrderWhatsAppMessage({
   const orderNumber = String(orderId || 0).padStart(4, '0');
   const isDelivery = String(customer.deliveryType || '').toLowerCase() === 'domicilio';
   const lines = [
-    `${WHATSAPP_ICONS.burger} NUEVA ORDEN #${orderNumber}`,
+    `*NUEVA ORDEN (#${orderNumber})*`,
     '',
-    `Hola ${restaurantName}, soy ${customer.name}. Me gustaría hacer un pedido.`,
+    `Hola *${restaurantName}*, soy *${customer.name}*, Me gustaría hacer un pedido.`,
     '',
-    'Datos del cliente',
-    `Cliente: ${customer.name}`,
-    `Teléfono: ${customer.phone}`,
+    '*Datos del cliente*',
+    `*Nombre*: ${customer.name}`,
+    `*Teléfono*: ${customer.phone}`,
+    `*Entrega:* ${isDelivery ? `${WHATSAPP_ICONS.delivery} A Domicilio` : `${WHATSAPP_ICONS.store} Recoger en local`}`,
     '',
   ];
 
   if (isDelivery) {
     lines.push(
-      `${WHATSAPP_ICONS.delivery} Entrega a domicilio`,
-      `Dirección: ${customer.address || ''}`,
-      `Barrio: ${customer.barrio || ''}`,
+      '*Entrega a domicilio*',
+      `*Dirección:* ${customer.address || ''}`,
+      `*Barrio:* ${customer.barrio || ''}`,
     );
-    if (customer.apartment) lines.push(`Apartamento: ${customer.apartment}`);
-    if (customer.tower) lines.push(`Torre: ${customer.tower}`);
-    if (customer.floor) lines.push(`Piso: ${customer.floor}`);
-    if (customer.reference) lines.push(`Referencia: ${customer.reference}`);
+    if (customer.apartment) lines.push(`*Apartamento:* ${customer.apartment}`);
+    if (customer.tower) lines.push(`*Torre:* ${customer.tower}`);
+    if (customer.floor) lines.push(`*Piso:* ${customer.floor}`);
+    if (customer.reference) lines.push(`*Referencia:* ${customer.reference}`);
     lines.push(`*Rastrear pedido:* ${WHATSAPP_ICONS.tracking} ${trackingUrl}`);
   } else {
     lines.push(
-      `${WHATSAPP_ICONS.store} RECOGER EN LOCAL`,
+      '*RECOGER EN LOCAL*',
       '',
-      `${WHATSAPP_ICONS.pin} ${restaurantName}`,
+      `${WHATSAPP_ICONS.pin} *${restaurantName}*`,
       'Tu pedido estará disponible para recoger en nuestro establecimiento.',
       `*Rastrear pedido:* ${WHATSAPP_ICONS.tracking} ${trackingUrl}`
     );
@@ -98,26 +99,25 @@ export function buildNewOrderWhatsAppMessage({
 
   lines.push(
     '',
-    `${WHATSAPP_ICONS.cart} Detalle del pedido`,
+    '*Detalle del pedido*',
     '',
   );
   items.forEach((item) => {
     const quantity = Number(item.quantity || item.qty || 1);
     lines.push(`\u2022 ${quantity}x ${item.title || item.name || 'Producto'} \u2014 ${formatCop(Number(item.price || 0) * quantity)}`);
   });
-  if (customer.comment) lines.push('', `${WHATSAPP_ICONS.note} Observaciones: ${customer.comment}`);
+  if (customer.comment) lines.push(`*Comentarios:* ${customer.comment}`);
   lines.push('', ...paymentLines({
     paymentMethod: customer.paymentMethod,
     cashAmount: customer.cashAmount,
     change,
     transferBank: customer.transferBank === 'nequi' ? 'Nequi' : customer.transferBank ? 'Llave Bre-B' : '',
   }));
-  if (isDelivery && Number(deliveryFee) > 0) lines.push(`${WHATSAPP_ICONS.delivery} Domicilio: ${formatCop(deliveryFee)}`);
+  if (isDelivery && Number(deliveryFee) > 0) lines.push(`*Domicilio:* ${formatCop(deliveryFee)}`);
   lines.push(
+    `*Total a pagar:* ${formatCop(total || (Number(subtotal) + Number(deliveryFee)))}`,
     '',
-    `TOTAL A PAGAR: ${formatCop(total || (Number(subtotal) + Number(deliveryFee)))}`,
-    '',
-    `¡Gracias por elegir ${restaurantName}! ${WHATSAPP_ICONS.heart}`,
+    `*¡Gracias por elegir ${restaurantName}!* ${WHATSAPP_ICONS.heart}`,
   );
   return normalizeWhatsAppMessage(lines.join('\n'));
 }
