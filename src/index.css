@@ -20,7 +20,7 @@
 }
 
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   margin: 0;
   padding: 0;
 }
@@ -57,7 +57,9 @@ body {
 
 .main-content {
   flex: 1;
-  overflow-y: auto;
+  /* No usar overflow-y:auto aquí: crea un contenedor de scroll que nunca se desplaza
+     y rompe el position: sticky de la barra de categorías. */
+  overflow-x: clip;
   position: relative;
 }
 

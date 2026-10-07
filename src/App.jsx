@@ -513,7 +513,6 @@ function App() {
   if (loading) {
     return (
       <div className="global-loader-container">
-        <img src={logoImg} alt="Distrito BG" className="loader-logo" />
         <div className="professional-spinner"></div>
         <p>Cargando menú...</p>
       </div>
