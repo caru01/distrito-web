@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share, Car, Store, MapPin, Clock } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share, Car, Store, MapPin, Clock, KeyRound } from 'lucide-react';
 import logoImg from './assets/logo-horizontal.png';
 
 import { API_URL } from './config/api';
 import OrderTracker from './components/OrderTracker';
 import ScheduleModal from './components/ScheduleModal';
-import { buildNewOrderWhatsAppMessage, createWhatsAppUrl, DeliveryAddressPicker } from '@distrito/shared-ui';
+import { buildNewOrderWhatsAppMessage, createWhatsAppUrl } from '@distrito/shared-ui';
 import { applyWebTheme } from './utils/theme';
 
 function announcementStorageKey(announcement) {
@@ -217,13 +217,6 @@ function App() {
     cashAmount: '',
     transferBank: 'nequi' // 'nequi' | 'banco'
   });
-  const [mapsAvailable, setMapsAvailable] = useState(
-    import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? null : false
-  );
-
-  const updateDeliveryLocation = (changes) => {
-    setCustomer((current) => ({ ...current, ...changes }));
-  };
 
   const [copiedNequi, setCopiedNequi] = useState(false);
   const [copiedBanco, setCopiedBanco] = useState(false);
@@ -414,11 +407,6 @@ function App() {
     }
     if (customer.deliveryType === 'domicilio' && (!customer.address || !customer.barrio)) {
       alert("Por favor ingresa la dirección y el barrio para el domicilio.");
-      return;
-    }
-    if (customer.deliveryType === 'domicilio' && mapsAvailable !== false
-        && (!customer.locationConfirmed || customer.latitude == null || customer.longitude == null)) {
-      alert("Selecciona una sugerencia, ajusta el marcador si hace falta y confirma la ubicación.");
       return;
     }
     if (customer.paymentMethod === 'efectivo' && !customer.cashAmount) {
@@ -919,16 +907,21 @@ function App() {
               {customer.deliveryType === 'domicilio' ? (
                 <>
                   <h3 className="form-section-title">Dirección de Entrega</h3>
-                  <DeliveryAddressPicker
-                    value={customer}
-                    onChange={updateDeliveryLocation}
-                    onAvailabilityChange={setMapsAvailable}
-                    apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}
-                    mapId={import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID'}
-                  />
+                  <div className="form-group">
+                    <label htmlFor="delivery-address">Dirección</label>
+                    <input 
+                      id="delivery-address" 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="Ej. Calle 15 # 12-34" 
+                      value={customer.address} 
+                      onChange={e => setCustomer({...customer, address: e.target.value})} 
+                      autoComplete="street-address"
+                    />
+                  </div>
                   <div className="form-group">
                     <label htmlFor="delivery-barrio">Barrio</label>
-                    <input id="delivery-barrio" type="text" className="form-input" placeholder="Barrio" value={customer.barrio} onChange={e => setCustomer({...customer, barrio: e.target.value})} />
+                    <input id="delivery-barrio" type="text" className="form-input" placeholder="Ej. Los Cortijos, San Joaquín..." value={customer.barrio} onChange={e => setCustomer({...customer, barrio: e.target.value})} />
                   </div>
                   <div className="delivery-details-grid">
                     <div className="form-group">
@@ -967,52 +960,96 @@ function App() {
                 <input type="text" className="form-input" placeholder="Comentario (opcional)" value={customer.comment} onChange={e => setCustomer({...customer, comment: e.target.value})} />
               </div>
 
-              <h3 className="form-section-title">Forma de Pago</h3>
-              <div className="radio-group">
-                {settings.payment_efectivo !== false && <label className="radio-label">
-                  <input type="radio" name="payment" checked={customer.paymentMethod === 'efectivo'} onChange={() => setCustomer({...customer, paymentMethod: 'efectivo'})} />
-                  Efectivo
-                </label>}
-                {(settings.payment_nequi || settings.payment_daviplata || settings.payment_transferencia || settings.payment_pse) && <label className="radio-label">
-                  <input type="radio" name="payment" checked={customer.paymentMethod === 'transferencia'} onChange={() => setCustomer({...customer, paymentMethod: 'transferencia'})} />
-                  Transferencia
-                </label>}
+              <h3 className="form-section-title">Método de Pago</h3>
+              <div className="payment-options-grid">
+                {settings.payment_efectivo !== false && (
+                  <button
+                    type="button"
+                    className={`payment-option-card ${customer.paymentMethod === 'efectivo' ? 'active' : ''}`}
+                    onClick={() => setCustomer(prev => ({ ...prev, paymentMethod: 'efectivo' }))}
+                  >
+                    <div className="payment-option-icon">
+                      <Banknote size={26} strokeWidth={2.2} />
+                    </div>
+                    <span className="payment-option-title">Efectivo</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className={`payment-option-card ${customer.paymentMethod === 'transferencia' && customer.transferBank === 'nequi' ? 'active' : ''}`}
+                  onClick={() => setCustomer(prev => ({ ...prev, paymentMethod: 'transferencia', transferBank: 'nequi' }))}
+                >
+                  <div className="payment-option-icon">
+                    <Smartphone size={26} strokeWidth={2.2} />
+                  </div>
+                  <span className="payment-option-title">Nequi</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`payment-option-card ${customer.paymentMethod === 'transferencia' && customer.transferBank === 'banco' ? 'active' : ''}`}
+                  onClick={() => setCustomer(prev => ({ ...prev, paymentMethod: 'transferencia', transferBank: 'banco' }))}
+                >
+                  <div className="payment-option-icon">
+                    <KeyRound size={26} strokeWidth={2.2} />
+                  </div>
+                  <span className="payment-option-title">Llave Bre-B</span>
+                </button>
               </div>
 
               {customer.paymentMethod === 'efectivo' && (
-                <div className="form-group animate-in fade-in">
-                  <input type="number" className="form-input" placeholder="¿Con cuánto vas a pagar?" value={customer.cashAmount} onChange={e => setCustomer({...customer, cashAmount: e.target.value})} />
+                <div className="payment-details-box animate-in fade-in">
+                  <div className="form-group">
+                    <label htmlFor="cash-amount">¿Con cuánto vas a pagar?</label>
+                    <input
+                      id="cash-amount"
+                      type="number"
+                      className="form-input"
+                      placeholder={`Ej: ${orderTotal}`}
+                      value={customer.cashAmount}
+                      onChange={e => setCustomer({...customer, cashAmount: e.target.value})}
+                    />
+                  </div>
+                  {Number(customer.cashAmount) > orderTotal && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--primary-color, #D4A017)', fontWeight: '600' }}>
+                      💵 Cambio: {formatter.format(Number(customer.cashAmount) - orderTotal)}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {customer.paymentMethod === 'transferencia' && (
+              {customer.paymentMethod === 'transferencia' && customer.transferBank === 'nequi' && (
                 <div className="transfer-info animate-in fade-in">
-                  <p className="transfer-desc" style={{marginBottom: '10px', fontWeight: 'bold'}}>Selecciona el banco al que transferiste:</p>
-                  
-                  <div className="radio-group" style={{marginBottom: '15px'}}>
-                    {settings.payment_nequi !== false && <label className="radio-label">
-                      <input type="radio" name="transferBank" checked={customer.transferBank === 'nequi'} onChange={() => setCustomer({...customer, transferBank: 'nequi'})} />
-                      Nequi
-                    </label>}
-                    {(settings.payment_transferencia || settings.bancolombia_number) && <label className="radio-label">
-                      <input type="radio" name="transferBank" checked={customer.transferBank === 'banco'} onChange={() => setCustomer({...customer, transferBank: 'banco'})} />
-                      Llave Bre-B
-                    </label>}
-                  </div>
+                  <p className="transfer-desc" style={{ marginBottom: '8px', fontWeight: '800', color: '#FFFFFF', fontSize: '0.95rem' }}>
+                    Transfiere a nuestra cuenta Nequi:
+                  </p>
+                  <button type="button" className="copy-btn" onClick={() => copyToClipboard(settings.nequi_number, 'nequi')}>
+                    <span className="copy-text" style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '1rem' }}>
+                      Nequi: {settings.nequi_number || 'No configurado'}
+                    </span>
+                    {copiedNequi ? <Check size={18} color="#4ade80" /> : <Copy size={18} color="var(--primary-color, #D4A017)" />}
+                  </button>
+                  <p style={{ marginTop: '8px', fontSize: '0.8rem', color: '#A3A3A3', lineHeight: '1.4' }}>
+                    💡 Toca para copiar el número. Envía el comprobante por WhatsApp al confirmar.
+                  </p>
+                </div>
+              )}
 
-                  {customer.transferBank === 'nequi' && (
-                    <button className="copy-btn" onClick={() => copyToClipboard(settings.nequi_number, 'nequi')}>
-                      <span className="copy-text">Nequi: {settings.nequi_number || 'No config'}</span>
-                      {copiedNequi ? <Check size={16} color="green" /> : <Copy size={16} color="#999" />}
-                    </button>
-                  )}
-                  
-                  {customer.transferBank === 'banco' && (
-                    <button className="copy-btn" onClick={() => copyToClipboard(settings.bancolombia_number, 'banco')}>
-                      <span className="copy-text">Llave Bre-B: {settings.bancolombia_number || 'No config'}</span>
-                      {copiedBanco ? <Check size={16} color="green" /> : <Copy size={16} color="#999" />}
-                    </button>
-                  )}
+              {customer.paymentMethod === 'transferencia' && customer.transferBank === 'banco' && (
+                <div className="transfer-info animate-in fade-in">
+                  <p className="transfer-desc" style={{ marginBottom: '8px', fontWeight: '800', color: '#FFFFFF', fontSize: '0.95rem' }}>
+                    Transfiere mediante Llave Bre-B:
+                  </p>
+                  <button type="button" className="copy-btn" onClick={() => copyToClipboard(settings.bancolombia_number, 'banco')}>
+                    <span className="copy-text" style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '1rem' }}>
+                      Llave Bre-B: {settings.bancolombia_number || 'No configurado'}
+                    </span>
+                    {copiedBanco ? <Check size={18} color="#4ade80" /> : <Copy size={18} color="var(--primary-color, #D4A017)" />}
+                  </button>
+                  <p style={{ marginTop: '8px', fontSize: '0.8rem', color: '#A3A3A3', lineHeight: '1.4' }}>
+                    💡 Toca para copiar la llave. Envía el comprobante por WhatsApp al confirmar.
+                  </p>
                 </div>
               )}
             </div>
