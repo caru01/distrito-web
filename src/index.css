@@ -1049,6 +1049,197 @@ body {
   margin-bottom: 0.8rem;
 }
 
+/* ============================================================
+   Paso 2: Selección de Forma de Entrega
+============================================================ */
+.delivery-step-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+  animation: fadeInStep 0.25s ease-out;
+}
+
+@keyframes fadeInStep {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.delivery-step-header {
+  margin-bottom: 0.25rem;
+}
+
+.delivery-step-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.delivery-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.delivery-option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 1.5rem 0.75rem;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 2px solid #262626;
+  background-color: #161616;
+  color: #D1D5DB;
+  transition: all 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
+  user-select: none;
+  text-align: center;
+  outline: none;
+}
+
+.delivery-option-card:hover {
+  border-color: rgba(212, 160, 23, 0.45);
+  background-color: #1f1f1f;
+  color: #FFFFFF;
+  transform: translateY(-2px);
+}
+
+.delivery-option-card.active {
+  background-color: var(--primary-color, #D4A017);
+  border-color: var(--primary-color, #D4A017);
+  color: #0D0D0D;
+  box-shadow: 0 8px 24px rgba(212, 160, 23, 0.25);
+  transform: translateY(-2px);
+}
+
+.delivery-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.delivery-option-card:hover .delivery-option-icon {
+  transform: scale(1.08);
+}
+
+.delivery-option-card.active .delivery-option-icon {
+  color: #0D0D0D;
+}
+
+.delivery-option-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.delivery-option-card.active .delivery-option-title {
+  color: #0D0D0D;
+  font-weight: 800;
+}
+
+.delivery-info-banner {
+  background: #141414;
+  border: 1px solid #282828;
+  border-radius: 16px;
+  padding: 1.15rem;
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.delivery-info-icon-wrapper {
+  background: rgba(212, 160, 23, 0.14);
+  color: var(--primary-color, #D4A017);
+  padding: 0.6rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.delivery-info-text strong {
+  display: block;
+  font-size: 0.98rem;
+  color: #FFFFFF;
+  margin-bottom: 0.25rem;
+}
+
+.delivery-info-text p {
+  font-size: 0.85rem;
+  color: #A3A3A3;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.delivery-info-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary-color, #D4A017);
+  background: rgba(212, 160, 23, 0.15);
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+}
+
+/* ============================================================
+   Paso 3: Tarjeta de Retiro en Tienda Física
+============================================================ */
+.pickup-summary-card {
+  background: #141414;
+  border: 1px solid #282828;
+  border-left: 4px solid var(--primary-color, #D4A017);
+  border-radius: 16px;
+  padding: 1.2rem;
+  margin-bottom: 1.25rem;
+}
+
+.pickup-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.pickup-summary-header h4 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.pickup-address, .pickup-time {
+  font-size: 0.88rem;
+  color: #CCCCCC;
+  margin-bottom: 0.45rem;
+  line-height: 1.45;
+}
+
+.pickup-address strong, .pickup-time strong {
+  color: #FFFFFF;
+}
+
+.pickup-note {
+  margin-top: 0.85rem;
+  font-size: 0.82rem;
+  color: #A3A3A3;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  line-height: 1.4;
+}
+
 .copy-btn {
   display: flex;
   justify-content: space-between;

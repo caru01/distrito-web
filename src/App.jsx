@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share, Car, Store, MapPin, Clock } from 'lucide-react';
 import logoImg from './assets/logo-horizontal.png';
 
 import { API_URL } from './config/api';
@@ -379,6 +379,12 @@ function App() {
   };
 
   const removeItem = (id) => setCart(prev => prev.filter(item => item.id !== id));
+
+  useEffect(() => {
+    if (cart.length === 0 && checkoutStep > 1) {
+      setCheckoutStep(1);
+    }
+  }, [cart.length, checkoutStep]);
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const deliveryFee = customer.deliveryType === 'domicilio' ? Math.max(0, Number(settings.delivery_cost || 0)) : 0;
@@ -775,21 +781,25 @@ function App() {
         <aside className={`cart-sidebar ${isCartOpenMobile ? 'open' : ''}`}>
           <div className="cart-header">
           <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-            {checkoutStep === 2 && (
-              <button className="back-btn" onClick={() => setCheckoutStep(1)}>
+            {checkoutStep > 1 && (
+              <button className="back-btn" onClick={() => setCheckoutStep(prev => prev - 1)} aria-label="Volver">
                 <ArrowLeft size={20} />
               </button>
             )}
-            <h2>{checkoutStep === 1 ? '🛒 Tu Pedido' : 'Datos de Envío'}</h2>
+            <h2>
+              {checkoutStep === 1 && '🛒 Tu Pedido'}
+              {checkoutStep === 2 && 'Forma de Entrega'}
+              {checkoutStep === 3 && (customer.deliveryType === 'domicilio' ? 'Datos de Domicilio' : 'Datos para Recoger')}
+            </h2>
             {checkoutStep === 1 && <span className="cart-count">{cartTotalItems}</span>}
           </div>
-          <button className="close-cart-btn" onClick={() => setIsCartOpenMobile(false)}>
+          <button className="close-cart-btn" onClick={() => setIsCartOpenMobile(false)} aria-label="Cerrar">
             <X size={24} />
           </button>
         </div>
 
         <div className="cart-content-scroll">
-          {checkoutStep === 1 ? (
+          {checkoutStep === 1 && (
             <div className="cart-items">
               {cart.length === 0 ? (
                 <div className="empty-cart">
@@ -820,7 +830,69 @@ function App() {
                 ))
               )}
             </div>
-          ) : (
+          )}
+
+          {checkoutStep === 2 && (
+            <div className="delivery-step-wrapper">
+              <div className="delivery-step-header">
+                <h3 className="delivery-step-title">Selecciona forma de entrega</h3>
+              </div>
+
+              <div className="delivery-options-grid">
+                <button
+                  type="button"
+                  className={`delivery-option-card ${customer.deliveryType === 'recoger' ? 'active' : ''}`}
+                  onClick={() => setCustomer(prev => ({ ...prev, deliveryType: 'recoger' }))}
+                >
+                  <div className="delivery-option-icon">
+                    <ShoppingBag size={34} strokeWidth={2.2} />
+                  </div>
+                  <span className="delivery-option-title">Recoger en local</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`delivery-option-card ${customer.deliveryType === 'domicilio' ? 'active' : ''}`}
+                  onClick={() => setCustomer(prev => ({ ...prev, deliveryType: 'domicilio' }))}
+                >
+                  <div className="delivery-option-icon">
+                    <Car size={34} strokeWidth={2.2} />
+                  </div>
+                  <span className="delivery-option-title">Domicilio</span>
+                </button>
+              </div>
+
+              {customer.deliveryType === 'recoger' ? (
+                <div className="delivery-info-banner">
+                  <div className="delivery-info-icon-wrapper">
+                    <Store size={22} />
+                  </div>
+                  <div className="delivery-info-text">
+                    <strong>Retiras en el local</strong>
+                    <p>{settings.kitchen_address || settings.address || 'Punto de venta principal'}</p>
+                    <span className="delivery-info-badge">⏱️ Tiempo estimado: {settings.prep_time || '30 - 45 min'}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="delivery-info-banner">
+                  <div className="delivery-info-icon-wrapper">
+                    <Car size={22} />
+                  </div>
+                  <div className="delivery-info-text">
+                    <strong>Entrega a domicilio</strong>
+                    <p>Llevamos tu pedido caliente y seguro hasta tu dirección.</p>
+                    {Number(settings.delivery_cost) > 0 ? (
+                      <span className="delivery-info-badge">🛵 Domicilio: {formatter.format(Number(settings.delivery_cost))}</span>
+                    ) : (
+                      <span className="delivery-info-badge">🛵 Domicilio disponible</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {checkoutStep === 3 && (
             <div className="customer-form">
               <h3 className="form-section-title">Datos del Cliente</h3>
               <div className="form-group">
@@ -844,20 +916,9 @@ function App() {
                 </div>
               )}
 
-              <h3 className="form-section-title">Forma de Entrega</h3>
-              <div className="radio-group">
-                <label className="radio-label">
-                  <input type="radio" name="deliveryType" checked={customer.deliveryType === 'domicilio'} onChange={() => setCustomer({...customer, deliveryType: 'domicilio'})} />
-                  A Domicilio
-                </label>
-                <label className="radio-label">
-                  <input type="radio" name="deliveryType" checked={customer.deliveryType === 'recoger'} onChange={() => setCustomer({...customer, deliveryType: 'recoger'})} />
-                  Recoger Local
-                </label>
-              </div>
-
-              {customer.deliveryType === 'domicilio' && (
+              {customer.deliveryType === 'domicilio' ? (
                 <>
+                  <h3 className="form-section-title">Dirección de Entrega</h3>
                   <DeliveryAddressPicker
                     value={customer}
                     onChange={updateDeliveryLocation}
@@ -888,6 +949,18 @@ function App() {
                     <textarea id="delivery-reference" className="form-input delivery-reference-input" placeholder="Ej. portón negro, casa azul, frente al parque" value={customer.reference} onChange={e => setCustomer({...customer, reference: e.target.value})} />
                   </div>
                 </>
+              ) : (
+                <div className="pickup-summary-card">
+                  <div className="pickup-summary-header">
+                    <Store size={22} color="var(--primary-color, #D4A017)" />
+                    <h4>Información de Retiro</h4>
+                  </div>
+                  <p className="pickup-address"><strong>Punto de recogida:</strong> {settings.kitchen_address || settings.address || 'Punto de venta principal'}</p>
+                  <p className="pickup-time"><strong>Tiempo aprox. de preparación:</strong> {settings.prep_time || '30 - 45 min'}</p>
+                  <div className="pickup-note">
+                    ℹ️ Te contactaremos a tu WhatsApp cuando tu pedido esté listo para retirar en el local.
+                  </div>
+                </div>
               )}
 
               <div className="form-group">
@@ -951,42 +1024,80 @@ function App() {
                 <span>Subtotal</span>
                 <span>{formatter.format(subtotal)}</span>
               </div>
-              {customer.deliveryType === 'domicilio' && (
+              {checkoutStep > 1 && customer.deliveryType === 'domicilio' && (
                 <div className="cart-summary">
                   <span>Domicilio</span>
-                  <span>{formatter.format(deliveryFee)}</span>
+                  <span>{deliveryFee > 0 ? formatter.format(deliveryFee) : 'Gratis'}</span>
+                </div>
+              )}
+              {checkoutStep > 1 && customer.deliveryType === 'recoger' && (
+                <div className="cart-summary">
+                  <span>Domicilio</span>
+                  <span style={{ color: 'var(--primary-color, #D4A017)' }}>Recoger en local (Gratis)</span>
                 </div>
               )}
               <div className="checkout-total">
                 <span>Total a Pagar</span>
-                <span>{formatter.format(orderTotal)}</span>
+                <span>{formatter.format(checkoutStep === 1 ? subtotal : orderTotal)}</span>
               </div>
               
-              {checkoutStep === 1 ? (
-                <button 
-                  className="checkout-btn" 
-                  onClick={() => setCheckoutStep(2)}
-                  disabled={cart.length === 0}
-                >
-                  Continuar Pedido
-                </button>
-              ) : (
-                <button 
-                  className="checkout-btn" 
-                  onClick={handleCheckout}
-                  disabled={cart.length === 0 || !horariosStatus?.isOpen}
-                >
-                  {horariosStatus?.isOpen ? 'Confirmar por WhatsApp' : 'Restaurante Cerrado'}
-                </button>
+              {checkoutStep === 1 && (
+                <>
+                  <button 
+                    className="checkout-btn" 
+                    onClick={() => setCheckoutStep(2)}
+                    disabled={cart.length === 0}
+                  >
+                    Continuar Pedido
+                  </button>
+                  {cart.length > 0 && (
+                    <button 
+                      className="empty-cart-btn" 
+                      onClick={() => setCart([])}
+                      style={{ marginTop: '0.75rem' }}
+                    >
+                      Vaciar Pedido
+                    </button>
+                  )}
+                </>
               )}
-              
-              {cart.length > 0 && checkoutStep === 1 && (
-                <button 
-                  className="empty-cart-btn" 
-                  onClick={() => setCart([])}
-                >
-                  Vaciar Pedido
-                </button>
+
+              {checkoutStep === 2 && (
+                <>
+                  <button 
+                    className="checkout-btn" 
+                    onClick={() => setCheckoutStep(3)}
+                    disabled={cart.length === 0}
+                  >
+                    Continuar
+                  </button>
+                  <button 
+                    className="empty-cart-btn" 
+                    onClick={() => setCheckoutStep(1)}
+                    style={{ marginTop: '0.75rem' }}
+                  >
+                    Volver
+                  </button>
+                </>
+              )}
+
+              {checkoutStep === 3 && (
+                <>
+                  <button 
+                    className="checkout-btn" 
+                    onClick={handleCheckout}
+                    disabled={cart.length === 0 || !horariosStatus?.isOpen}
+                  >
+                    {horariosStatus?.isOpen ? 'Confirmar por WhatsApp' : 'Restaurante Cerrado'}
+                  </button>
+                  <button 
+                    className="empty-cart-btn" 
+                    onClick={() => setCheckoutStep(2)}
+                    style={{ marginTop: '0.75rem' }}
+                  >
+                    Volver
+                  </button>
+                </>
               )}
             </div>
             
