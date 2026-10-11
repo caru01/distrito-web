@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share, Car, Store, MapPin, Clock, KeyRound, Search, Phone, Instagram, Facebook, MessageCircle, ExternalLink } from 'lucide-react';
 import logoImg from './assets/logo-horizontal.png';
-import logoSquare from './assets/logo.png';
+import heroLogo from './assets/logo-hero.png';
 
 import { API_URL } from './config/api';
 import OrderTracker from './components/OrderTracker';
@@ -726,7 +726,7 @@ function App() {
           <div className="hero-banner-container">
             <div className="hero-logo-wrapper">
               <img 
-                src={logoSquare || settings.logo || logoImg} 
+                src={heroLogo || settings.logo || logoImg} 
                 alt={settings.restaurant_name || 'Distric House'} 
                 className="hero-logo-img"
               />
