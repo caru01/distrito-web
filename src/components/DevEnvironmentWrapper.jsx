@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 /**
  * DevEnvironmentWrapper
- * Entorno de Pruebas y Simulador Local para Distrito BG
+ * Entorno de Pruebas y Simulador Local para Distric House
  * 
  * Activo únicamente en modo desarrollo local (import.meta.env.DEV).
  * Permite cambiar de vistas (?view=customer | admin | split)
@@ -319,7 +319,7 @@ export default function DevEnvironmentWrapper({ children }) {
             <iframe
               src="http://localhost:5174/admin/pedidos"
               style={{ flex: 1, width: '100%', border: 'none', backgroundColor: '#0A0A0A' }}
-              title="Panel de Pedidos Distrito BG"
+              title="Panel de Pedidos Distric House"
             />
           </div>
         </div>

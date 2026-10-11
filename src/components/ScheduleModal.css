@@ -228,9 +228,9 @@
 
 /* Estado SELECCIONADO: Borde resaltado y fondo sutil */
 .schedule-day-card.selected {
-  border-color: #D4A017;
+  border-color: #B30401;
   background-color: #FFFDF7;
-  box-shadow: 0 4px 12px rgba(212, 160, 23, 0.12);
+  box-shadow: 0 4px 12px rgba(179, 4, 1, 0.12);
 }
 
 /* Estado CERRADO / INACTIVO */
@@ -272,7 +272,7 @@
 }
 
 .schedule-day-card.selected .schedule-radio-outer {
-  border-color: #D4A017;
+  border-color: #B30401;
   background-color: #FFFFFF;
 }
 
@@ -280,7 +280,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: #D4A017;
+  background-color: #B30401;
   transform: scale(0);
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -310,8 +310,8 @@
 }
 
 .schedule-today-badge {
-  background-color: #D4A017;
-  color: #000000;
+  background-color: #B30401;
+  color: #FFFFFF;
   font-size: 0.68rem;
   font-weight: 800;
   padding: 1px 7px;

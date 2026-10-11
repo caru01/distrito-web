@@ -60,7 +60,7 @@ export default function ScheduleModal({ isOpen, onClose, horariosStatus, setting
 
   const isStoreCurrentlyOpen = Boolean(horariosStatus?.isOpen);
   const logoSrc = settings?.web_logo || settings?.logo || defaultLogo;
-  const storeName = settings?.restaurant_name || 'Distrito BG';
+  const storeName = settings?.restaurant_name || 'Distric House';
 
   // Formato legible de hora HH:MM (ej. 17:00:00 -> 17:00)
   const formatTime = (timeStr) => {
@@ -91,7 +91,7 @@ export default function ScheduleModal({ isOpen, onClose, horariosStatus, setting
               {logoSrc ? (
                 <img src={logoSrc} alt={storeName} className="schedule-brand-logo" />
               ) : (
-                <Clock size={20} color="#D4A017" />
+                <Clock size={20} color="#B30401" />
               )}
             </div>
             <div className="schedule-brand-info">
@@ -119,7 +119,7 @@ export default function ScheduleModal({ isOpen, onClose, horariosStatus, setting
         {/* Título de sección */}
         <div className="schedule-modal-subheader">
           <h3 id="schedule-modal-title" className="schedule-section-title">
-            <Clock size={16} color="#D4A017" />
+            <Clock size={16} color="#B30401" />
             Horarios de atención
           </h3>
           <span className={`schedule-current-status-pill ${isStoreCurrentlyOpen ? 'open' : 'closed'}`}>

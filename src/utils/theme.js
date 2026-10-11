@@ -19,5 +19,5 @@ export function applyWebTheme(settings = {}) {
   };
   document.documentElement.style.setProperty('--app-font', fonts[settings.web_font_family] || fonts.modern);
   document.documentElement.dataset.cardStyle = settings.web_card_style || 'rounded';
-  document.title = settings.web_page_title || settings.restaurant_name || 'Distrito BG';
+  document.title = settings.web_page_title || settings.restaurant_name || 'Distric House';
 }

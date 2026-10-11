@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share, Car, Store, MapPin, Clock, KeyRound } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share, Car, Store, MapPin, Clock, KeyRound, Search, Phone, Instagram, Facebook, MessageCircle, ExternalLink } from 'lucide-react';
 import logoImg from './assets/logo-horizontal.png';
+import logoSquare from './assets/logo.png';
 
 import { API_URL } from './config/api';
 import OrderTracker from './components/OrderTracker';
@@ -46,6 +47,7 @@ function trackingOrderFromUrl() {
 
 function App() {
   const [activeCategory, setActiveCategory] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
   
   // Data from Backend
@@ -344,10 +346,21 @@ function App() {
   }, [categories, activeCategory]);
 
   const filteredProducts = useMemo(() => {
-    if (!activeCategory) return products;
-    if (activeCategory === 'featured') return products.filter(p => p.is_featured);
-    return products.filter(p => p.category === activeCategory);
-  }, [activeCategory, products]);
+    let list = products;
+    if (activeCategory === 'featured') {
+      list = list.filter(p => p.is_featured);
+    } else if (activeCategory) {
+      list = list.filter(p => p.category === activeCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(p => 
+        (p.title && p.title.toLowerCase().includes(q)) || 
+        (p.description && p.description.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [activeCategory, products, searchQuery]);
 
   const addToCart = (product) => {
     if (product.track_stock && Number(product.stock) <= 0) return;
@@ -478,7 +491,7 @@ function App() {
       deliveryFee: confirmedDeliveryFee,
       total: confirmedTotal,
       change: confirmedChange,
-      restaurantName: settings.restaurant_name || 'Distrito BG',
+      restaurantName: settings.restaurant_name || 'Distric House',
     });
     const whatsappUrl = createWhatsAppUrl(phoneNumber, message);
 
@@ -515,37 +528,130 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Botón flotante estilo barra para móviles */}
+      {/* Barra inferior flotante cuando se agregan productos ("Ver pedido") */}
       {cartTotalItems > 0 && !isCartOpenMobile && (
-        <div className="mobile-cart-bar" onClick={() => setIsCartOpenMobile(true)}>
+        <div 
+          className="mobile-cart-bar floating-order-bar" 
+          onClick={() => setIsCartOpenMobile(true)}
+          role="button"
+          tabIndex={0}
+          aria-label="Ver pedido"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsCartOpenMobile(true); } }}
+        >
           <div className="mobile-cart-bar-items">
             <span className="badge-count">{cartTotalItems}</span>
           </div>
-          <span className="mobile-cart-bar-text">Ver pedido</span>
+          <div className="mobile-cart-bar-center">
+            <ShoppingBag size={18} className="order-bar-icon" />
+            <span className="mobile-cart-bar-text">Ver pedido</span>
+          </div>
           <span className="mobile-cart-bar-total">{formatter.format(orderTotal)}</span>
         </div>
       )}
 
       {/* Main Area */}
       <main className="main-content">
-        {/* Top Navbar */}
-        <nav className="top-navbar">
-          <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            <Menu size={24} color="white" />
-          </button>
-          
-          <div className="nav-logo">
-            <img src={settings.web_logo || settings.logo || logoImg} alt={settings.restaurant_name || 'Distrito BG'} />
+        {/* Top Navbar Minimalista Premium */}
+        <header className="top-navbar">
+          <div className="nav-left">
+            <button 
+              className="mobile-menu-btn" 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Menú de navegación"
+            >
+              <Menu size={22} color="#111111" />
+            </button>
+            <div className="nav-logo">
+              <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                <img src={settings.web_logo || logoImg} alt={settings.restaurant_name || 'Distric House'} />
+              </a>
+            </div>
           </div>
           
-          <div className={`nav-links ${isMobileMenuOpen ? 'open' : ''}`}>
-            <a href="#" className="active" onClick={() => setIsMobileMenuOpen(false)}>INICIO</a>
-            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>MENÚ</a>
-            <a href="#" onClick={() => setIsMobileMenuOpen(false)}>PROMOCIONES</a>
-            <button className="tracking-nav-button" onClick={() => { setIsMobileMenuOpen(false); setIsTrackingOpen(true); }}>RASTREAR PEDIDO</button>
-          </div>
+          <nav className={`nav-links ${isMobileMenuOpen ? 'open' : ''}`}>
+            <a 
+              href="#menu" 
+              className="active" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setIsMobileMenuOpen(false); 
+                categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }); 
+              }}
+            >
+              MENÚ
+            </a>
+            <a 
+              href="#promociones" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setIsMobileMenuOpen(false); 
+                const promoCategory = categories.find(c => c.name.toLowerCase().includes('promo') || c.name.toLowerCase().includes('combo') || c.id === 'featured');
+                if (promoCategory) setActiveCategory(promoCategory.id);
+                categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }); 
+              }}
+            >
+              PROMOCIONES
+            </a>
+            <a 
+              href="#nosotros" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setIsMobileMenuOpen(false); 
+                document.getElementById('nosotros')?.scrollIntoView({ behavior: 'smooth' }); 
+              }}
+            >
+              NOSOTROS
+            </a>
+            <a 
+              href="#ubicaciones" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setIsMobileMenuOpen(false); 
+                document.getElementById('ubicaciones')?.scrollIntoView({ behavior: 'smooth' }); 
+              }}
+            >
+              UBICACIONES
+            </a>
+            <a 
+              href="#contacto" 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                setIsMobileMenuOpen(false); 
+                document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' }); 
+              }}
+            >
+              CONTACTO
+            </a>
+            <button 
+              className="tracking-nav-button" 
+              onClick={() => { setIsMobileMenuOpen(false); setIsTrackingOpen(true); }}
+            >
+              RASTREAR PEDIDO
+            </button>
+          </nav>
           
-          <div className="nav-status">
+          <div className="nav-actions">
+            {/* Buscador de escritorio integrado */}
+            <div className="nav-search-bar">
+              <Search size={16} className="nav-search-icon" />
+              <input
+                type="text"
+                placeholder="Buscar en el menú..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="nav-search-input"
+              />
+              {searchQuery && (
+                <button 
+                  className="nav-search-clear" 
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
             <div 
               className={`status-indicator ${!isOpen ? 'is-closed' : ''}`}
               role={!isOpen ? 'button' : undefined}
@@ -561,46 +667,178 @@ function App() {
                 }
               }}
             >
-              <span className="dot" style={{ backgroundColor: isOpen ? '#4ade80' : '#ff4757' }}></span>
+              <span className="dot" style={{ backgroundColor: isOpen ? '#16A34A' : '#EF4444' }}></span>
               <div className="status-text-row">
                 <strong>{isOpen ? 'Abierto' : 'Cerrado'}</strong>
                 <span>{scheduleText}</span>
               </div>
             </div>
-            <button className="desktop-cart-icon" onClick={() => setIsCartOpenMobile(true)}>
-              <ShoppingCart size={20} color="white" />
+
+            <button 
+              className="desktop-cart-icon" 
+              onClick={() => setIsCartOpenMobile(true)}
+              aria-label="Ver carrito"
+            >
+              <ShoppingCart size={20} color="#111111" />
               {cartTotalItems > 0 && <span className="badge">{cartTotalItems}</span>}
             </button>
           </div>
-        </nav>
+        </header>
 
-        {/* Hero Banner */}
-        <section className="hero-banner">
-          <div className="hero-content">
-            <h1>{settings.web_hero_title || `${settings.restaurant_name || 'DISTRITO BG'} · MÁS QUE COMIDA, UNA EXPERIENCIA`}</h1>
-            {settings.web_hero_subtitle && <p className="hero-welcome">{settings.web_hero_subtitle}</p>}
-            {settings.welcome_message && <p className="hero-welcome">{settings.welcome_message}</p>}
-            <div className="hero-features">
-              <div className="feature"><span className="icon">🐄</span> CARNE<br/>100% RES</div>
-              <div className="feature"><span className="icon">🥬</span> INGREDIENTES<br/>FRESCOS</div>
-              <div className="feature"><span className="icon">🔥</span> PREPARACIÓN<br/>AL MOMENTO</div>
+        {/* Buscador para dispositivos móviles */}
+        <div className="mobile-search-bar-container">
+          <div className="mobile-search-bar">
+            <Search size={18} className="nav-search-icon" />
+            <input
+              type="text"
+              placeholder="¿Qué se te antoja hoy? Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="mobile-search-input"
+            />
+            {searchQuery && (
+              <button 
+                className="nav-search-clear" 
+                onClick={() => setSearchQuery('')}
+                aria-label="Limpiar búsqueda"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Banner Principal Minimalista Premium */}
+        <section className="hero-banner-minimal">
+          <div className="hero-banner-container">
+            <div className="hero-logo-wrapper">
+              <img 
+                src={logoSquare || settings.logo || logoImg} 
+                alt={settings.restaurant_name || 'Distric House'} 
+                className="hero-logo-img"
+              />
             </div>
-            <button 
-              className="hero-btn"
-              onClick={() => {
-                if (!isOpen) {
-                  setIsScheduleModalOpen(true);
-                } else {
-                  categoriesRef.current?.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-            >
-              ORDENAR AHORA ➔
-            </button>
           </div>
         </section>
 
-        <h2 className="section-title">NUESTRO MENÚ</h2>
+        {/* Sección: Información Clave (Minimalista Premium) */}
+        <section className="key-info-section" aria-label="Información clave">
+          <div className="key-info-container">
+            {/* Bloque 1: Horario de atención */}
+            <div 
+              className="key-info-card key-info-clickable" 
+              onClick={() => setIsScheduleModalOpen(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsScheduleModalOpen(true); } }}
+              title="Toca para ver el horario completo"
+            >
+              <div className="key-info-icon-wrapper">
+                <Clock size={22} className="key-info-icon" />
+              </div>
+              <div className="key-info-content">
+                <h3 className="key-info-title">Horario de atención</h3>
+                <p className="key-info-text">
+                  {scheduleText || (horariosStatus?.schedule ? 'Consulta nuestro horario' : 'Consulta nuestro horario')}
+                </p>
+                <span className="key-info-action">
+                  Ver horarios detallados
+                </span>
+              </div>
+            </div>
+
+            {/* Bloque 2: Nuestra ubicación */}
+            <div className="key-info-card">
+              <div className="key-info-icon-wrapper">
+                <MapPin size={22} className="key-info-icon" />
+              </div>
+              <div className="key-info-content">
+                <h3 className="key-info-title">Nuestra ubicación</h3>
+                <p className="key-info-text">
+                  {settings.kitchen_address || settings.address || 'Ubicación disponible en tienda'}
+                </p>
+                {(settings.google_maps_url || settings.maps_url || settings.kitchen_address || settings.address) && (
+                  <a 
+                    href={settings.google_maps_url || settings.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.kitchen_address || settings.address)}`}
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="key-info-action key-info-link"
+                  >
+                    Ver en el mapa <ExternalLink size={13} className="inline-action-icon" />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Bloque 3: ¿Dudas o pedidos? */}
+            <div className="key-info-card">
+              <div className="key-info-icon-wrapper">
+                <MessageCircle size={22} className="key-info-icon" />
+              </div>
+              <div className="key-info-content">
+                <h3 className="key-info-title">¿Dudas o pedidos?</h3>
+                <p className="key-info-text">Escríbenos por WhatsApp</p>
+                {settings.whatsapp_number ? (
+                  <a 
+                    href={`https://wa.me/${settings.whatsapp_number.replace(/\D/g, '')}?text=${encodeURIComponent('Hola Distric House, me gustaría hacer una consulta sobre su menú y pedidos.')}`}
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="key-info-action key-info-link"
+                  >
+                    Enviar mensaje <ExternalLink size={13} className="inline-action-icon" />
+                  </a>
+                ) : (
+                  <span className="key-info-text-muted">Canal oficial activo</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Selector de Modo de Entrega (Únicamente 2 opciones: Recoger en local y Domicilio) */}
+        <section className="delivery-mode-section">
+          <div className="delivery-mode-container">
+            <div className="delivery-mode-grid">
+              <button
+                type="button"
+                className={`delivery-mode-card ${customer.deliveryType === 'recoger' ? 'active' : ''}`}
+                onClick={() => setCustomer(prev => ({ ...prev, deliveryType: 'recoger' }))}
+              >
+                <div className="delivery-mode-icon-circle">
+                  <ShoppingBag size={24} strokeWidth={2.2} />
+                </div>
+                <div className="delivery-mode-info">
+                  <span className="delivery-mode-title">Recoger en local</span>
+                  <span className="delivery-mode-subtitle">Listo para recoger</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`delivery-mode-card ${customer.deliveryType === 'domicilio' ? 'active' : ''}`}
+                onClick={() => setCustomer(prev => ({ ...prev, deliveryType: 'domicilio' }))}
+              >
+                <div className="delivery-mode-icon-circle">
+                  <Car size={24} strokeWidth={2.2} />
+                </div>
+                <div className="delivery-mode-info">
+                  <span className="delivery-mode-title">Domicilio</span>
+                  <span className="delivery-mode-subtitle">Te llevamos tu pedido</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div className="menu-header-bar" id="menu">
+          <h2 className="section-title">NUESTRO MENÚ</h2>
+          {searchQuery && (
+            <p className="search-active-indicator">
+              Mostrando resultados para: <strong>"{searchQuery}"</strong> (
+              <button className="search-reset-btn" onClick={() => setSearchQuery('')}>borrar filtro</button>)
+            </p>
+          )}
+        </div>
 
         <div className="shop-layout">
           <div className="shop-products">
@@ -732,41 +970,13 @@ function App() {
             <div className="no-products">No hay productos en esta categoría.</div>
           )}
         </div>
-
-        {/* Why Choose Us Section */}
-        <section className="why-choose-us">
-          <h2 className="why-title">¿Por qué elegir Distrito BG?</h2>
-          <p className="why-subtitle">Ofrecemos la mejor experiencia en cada bocado, con ingredientes de alta calidad y un servicio inigualable.</p>
-          <div className="why-grid">
-            <div className="why-card">
-              <div className="why-icon">🐄</div>
-              <h3 className="why-card-title">Carne 100% Res</h3>
-              <p className="why-card-desc">Seleccionamos cortes de primera calidad para garantizar el mejor sabor y textura en cada hamburguesa.</p>
-            </div>
-            <div className="why-card">
-              <div className="why-icon">🥬</div>
-              <h3 className="why-card-title">Ingredientes Frescos</h3>
-              <p className="why-card-desc">Vegetales frescos y pan artesanal horneado a diario para crear la combinación perfecta.</p>
-            </div>
-            <div className="why-card">
-              <div className="why-icon">🔥</div>
-              <h3 className="why-card-title">Preparación al Momento</h3>
-              <p className="why-card-desc">Cada pedido se prepara al instante para asegurar frescura, jugosidad y temperatura ideal.</p>
-            </div>
-            <div className="why-card">
-              <div className="why-icon">🛵</div>
-              <h3 className="why-card-title">Entrega Rápida</h3>
-              <p className="why-card-desc">Llevamos tu comida caliente y en tiempo récord directo a la puerta de tu casa.</p>
-            </div>
-          </div>
-        </section>
       </div>
+    </div>
 
-      {/* Sidebar / Cart Overlay para móviles */}
+      {/* Cart Drawer & Overlay (Disponible cuando se toca "Ver pedido" o el icono del carrito) */}
       <div className={`cart-overlay ${isCartOpenMobile ? 'open' : ''}`} onClick={() => setIsCartOpenMobile(false)}></div>
 
-      <div className="sidebar-wrapper">
-        <aside className={`cart-sidebar ${isCartOpenMobile ? 'open' : ''}`}>
+      <aside className={`cart-sidebar ${isCartOpenMobile ? 'open' : ''}`}>
           <div className="cart-header">
           <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
             {checkoutStep > 1 && (
@@ -833,9 +1043,10 @@ function App() {
                   onClick={() => setCustomer(prev => ({ ...prev, deliveryType: 'recoger' }))}
                 >
                   <div className="delivery-option-icon">
-                    <ShoppingBag size={34} strokeWidth={2.2} />
+                    <ShoppingBag size={30} strokeWidth={2} />
                   </div>
                   <span className="delivery-option-title">Recoger en local</span>
+                  <span className="delivery-option-subtitle">Listo para recoger</span>
                 </button>
 
                 <button
@@ -844,9 +1055,10 @@ function App() {
                   onClick={() => setCustomer(prev => ({ ...prev, deliveryType: 'domicilio' }))}
                 >
                   <div className="delivery-option-icon">
-                    <Car size={34} strokeWidth={2.2} />
+                    <Car size={30} strokeWidth={2} />
                   </div>
                   <span className="delivery-option-title">Domicilio</span>
+                  <span className="delivery-option-subtitle">Te llevamos tu pedido</span>
                 </button>
               </div>
 
@@ -1140,26 +1352,112 @@ function App() {
             
         </aside>
 
-        {/* Payment info placed outside the cart-sidebar */}
-        <div className="premium-payment-methods" style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', marginTop: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', flexShrink: 0 }}>
-          <h3 className="premium-payment-title" style={{ color: '#000' }}><CreditCard size={20} /> Paga como quieras</h3>
-          <div className="payment-icons-grid">
-            {settings.payment_efectivo !== false && <div className="payment-method-item" style={{ color: '#333' }}><Banknote className="payment-method-icon" size={20} /> Efectivo</div>}
-            {settings.payment_nequi !== false && <div className="payment-method-item" style={{ color: '#333' }}><Smartphone className="payment-method-icon" size={20} /> Nequi</div>}
-            {settings.payment_daviplata && <div className="payment-method-item" style={{ color: '#333' }}><Smartphone className="payment-method-icon" size={20} /> Daviplata</div>}
-            {settings.payment_transferencia && <div className="payment-method-item" style={{ color: '#333' }}><Wallet className="payment-method-icon" size={20} /> Transferencia</div>}
-          </div>
+        {/* PIE DE PÁGINA (FOOTER) MINIMALISTA PREMIUM */}
+        <footer className="site-footer">
+          <div className="footer-container">
+            <div className="footer-grid">
+              {/* Columna 1: Marca y descripción */}
+              <div className="footer-col footer-col-brand" id="nosotros">
+                <img 
+                  src={settings.web_logo || logoImg} 
+                  alt={settings.restaurant_name || 'Distric House'} 
+                  className="footer-logo"
+                />
+                <p className="footer-desc">
+                  Hamburguesas y comida rápida artesanal preparadas al momento con ingredientes frescos y 100% res de primera calidad.
+                </p>
+                <div className="footer-badges">
+                  <span className="footer-pill">🍔 Hecho al instante</span>
+                  <span className="footer-pill">⚡ Domicilio rápido</span>
+                </div>
+              </div>
 
-          <div className="premium-trust-section" style={{ color: '#333', borderColor: '#eee' }}>
-            <Lock className="icon" size={24} />
-            <div className="premium-trust-text">
-              <strong>Compra 100% segura</strong>
-              <p>Tu información está protegida y el proceso de compra es totalmente seguro.</p>
+              {/* Columna 2: Enlaces Rápidos */}
+              <div className="footer-col">
+                <h4 className="footer-title">NAVEGACIÓN</h4>
+                <ul className="footer-links">
+                  <li><a href="#menu" onClick={(e) => { e.preventDefault(); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }); }}>Nuestro Menú</a></li>
+                  <li><a href="#promociones" onClick={(e) => { e.preventDefault(); const promo = categories.find(c => c.name.toLowerCase().includes('promo') || c.id === 'featured'); if (promo) setActiveCategory(promo.id); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }); }}>Promociones y Combos</a></li>
+                  <li><button className="footer-link-btn" onClick={() => setIsTrackingOpen(true)}>Rastrear mi pedido</button></li>
+                  <li><button className="footer-link-btn" onClick={() => setIsScheduleModalOpen(true)}>Ver horarios de atención</button></li>
+                </ul>
+              </div>
+
+              {/* Columna 3: Horarios y Ubicación */}
+              <div className="footer-col" id="ubicaciones">
+                <h4 className="footer-title">HORARIOS & UBICACIÓN</h4>
+                <div className="footer-info-item">
+                  <Clock size={16} className="footer-info-icon" />
+                  <div>
+                    <strong>Horario de atención:</strong>
+                    <p>{scheduleText || 'Martes a Domingo'}</p>
+                  </div>
+                </div>
+                <div className="footer-info-item">
+                  <MapPin size={16} className="footer-info-icon" />
+                  <div>
+                    <strong>Punto de venta:</strong>
+                    <p>{settings.kitchen_address || settings.address || 'Valledupar, Colombia'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Columna 4: Contacto */}
+              <div className="footer-col" id="contacto">
+                <h4 className="footer-title">CONTACTO</h4>
+                <div className="footer-info-item">
+                  <Phone size={16} className="footer-info-icon" />
+                  <div>
+                    <strong>WhatsApp Pedidos:</strong>
+                    <p>
+                      <a href={`https://wa.me/${settings.whatsapp_number?.replace(/\D/g, '') || '573000000000'}`} target="_blank" rel="noreferrer" className="footer-phone-link">
+                        +{settings.whatsapp_number || '57 300 000 0000'}
+                      </a>
+                    </p>
+                  </div>
+                </div>
+                {settings.instagram_user && (
+                  <div className="footer-info-item">
+                    <Instagram size={16} className="footer-info-icon" />
+                    <div>
+                      <strong>Instagram:</strong>
+                      <p>
+                        <a href={`https://instagram.com/${settings.instagram_user.replace('@', '')}`} target="_blank" rel="noreferrer" className="footer-phone-link">
+                          @{settings.instagram_user.replace('@', '')}
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {settings.facebook_url && (
+                  <div className="footer-info-item">
+                    <Facebook size={16} className="footer-info-icon" />
+                    <div>
+                      <strong>Facebook:</strong>
+                      <p>
+                        <a href={settings.facebook_url} target="_blank" rel="noreferrer" className="footer-phone-link">
+                          Distric House
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Sub-footer con copyright y términos */}
+            <div className="footer-bottom">
+              <p className="footer-copy">
+                &copy; {new Date().getFullYear()} {settings.restaurant_name || 'Distric House'}. Todos los derechos reservados.
+              </p>
+              <div className="footer-legal">
+                <span>Términos y condiciones</span>
+                <span className="dot-sep">•</span>
+                <span>Política de privacidad</span>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-        </div>
+        </footer>
       </main>
 
       {/* MODAL DE ANUNCIO */}
@@ -1205,7 +1503,7 @@ function App() {
 
       {/* MODAL DE INSTALACIÓN PWA */}
       {showInstallBanner && (
-        <div className="install-banner" style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 40px)', maxWidth: '400px', backgroundColor: '#111', borderRadius: '16px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)', border: '1px solid #D4A017', zIndex: 10000, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="install-banner" style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 40px)', maxWidth: '400px', backgroundColor: '#111', borderRadius: '16px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)', border: '1px solid #B30401', zIndex: 10000, display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="install-banner-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div className="install-banner-brand" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <img src={settings.logo || logoImg} alt="Logo" style={{ width: '48px', height: '48px', objectFit: 'contain', backgroundColor: '#000', borderRadius: '12px', padding: '4px' }} />
@@ -1220,11 +1518,11 @@ function App() {
           </div>
           {isIOS ? (
             <div className="install-banner-hint" style={{ backgroundColor: '#1A1A1A', padding: '12px', borderRadius: '8px', fontSize: '13px', color: '#FFF', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Share size={16} color="#D4A017" style={{flexShrink: 0}} />
+              <Share size={16} color="#B30401" style={{flexShrink: 0}} />
               <span>Toca <b>Compartir</b> y luego <b>"Agregar a inicio"</b></span>
             </div>
           ) : (
-            <button className="install-banner-action" onClick={handleInstallClick} style={{ backgroundColor: '#D4A017', color: '#000', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: '800', fontSize: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+            <button className="install-banner-action" onClick={handleInstallClick} style={{ backgroundColor: '#B30401', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: '800', fontSize: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
               <Download size={20} />
               Instalar App
             </button>

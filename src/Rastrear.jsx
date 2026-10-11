@@ -152,7 +152,7 @@ export default function Rastrear() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 28 }}>🛵</span>
           <div>
-            <div style={{ fontSize: 11, color: '#BDBDBD', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Distrito BG</div>
+            <div style={{ fontSize: 11, color: '#BDBDBD', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>Distric House</div>
             <div style={{ fontSize: 17, fontWeight: 800 }}>Rastrear pedido</div>
           </div>
         </div>
@@ -266,12 +266,12 @@ export default function Rastrear() {
             {isExternalDelivery && (
               <div style={{ backgroundColor: '#111111', borderRadius: 20, padding: '20px 22px', border: '1px solid rgba(14,165,233,.35)', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                 <Truck size={24} color="#38BDF8" style={{ flex: '0 0 auto' }}/>
-                <div><strong style={{ color: '#FFFFFF', display: 'block', marginBottom: 5 }}>Tu pedido está siendo entregado por un operador logístico aliado.</strong><span style={{ color: '#BDBDBD', fontSize: 13 }}>{order.external_delivery?.company_name ? `Operador: ${order.external_delivery.company_name}. ` : ''}{order.external_delivery?.eta_minutes ? `Tiempo estimado: ${order.external_delivery.eta_minutes} minutos.` : 'Consulta el avance confirmado en la línea de estados.'}</span><small style={{ display: 'block', color: '#6B7280', marginTop: 7 }}>Este operador no comparte GPS con Distrito BG; por eso no mostramos una ubicación simulada.</small></div>
+                <div><strong style={{ color: '#FFFFFF', display: 'block', marginBottom: 5 }}>Tu pedido está siendo entregado por un operador logístico aliado.</strong><span style={{ color: '#BDBDBD', fontSize: 13 }}>{order.external_delivery?.company_name ? `Operador: ${order.external_delivery.company_name}. ` : ''}{order.external_delivery?.eta_minutes ? `Tiempo estimado: ${order.external_delivery.eta_minutes} minutos.` : 'Consulta el avance confirmado en la línea de estados.'}</span><small style={{ display: 'block', color: '#6B7280', marginTop: 7 }}>Este operador no comparte GPS con Distric House; por eso no mostramos una ubicación simulada.</small></div>
               </div>
             )}
 
             {deliveryStatus === 'En camino' && !isExternalDelivery && !hasDriverLocation && (
-              <div style={{ backgroundColor: '#111111', borderRadius: 20, padding: '18px 22px', border: '1px solid #1E1E1E', color: '#BDBDBD', display: 'flex', gap: 12, alignItems: 'center' }}><MapPin size={22} color="#D4A017"/><span>El domiciliario va en camino. El mapa aparecerá cuando recibamos una señal GPS real.</span></div>
+              <div style={{ backgroundColor: '#111111', borderRadius: 20, padding: '18px 22px', border: '1px solid #1E1E1E', color: '#BDBDBD', display: 'flex', gap: 12, alignItems: 'center' }}><MapPin size={22} color="#B30401"/><span>El domiciliario va en camino. El mapa aparecerá cuando recibamos una señal GPS real.</span></div>
             )}
 
             {/* Timeline de estados */}
