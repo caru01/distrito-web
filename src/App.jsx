@@ -60,6 +60,7 @@ function App() {
   const [checkoutStep, setCheckoutStep] = useState(1); // 1 = Cart, 2 = Checkout Form
   const [isCartOpenMobile, setIsCartOpenMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [announcement, setAnnouncement] = useState(null);
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [horariosStatus, setHorariosStatus] = useState({ isOpen: false, statusText: 'Consultando horario…' });
@@ -674,6 +675,15 @@ function App() {
               </div>
             </div>
 
+            {/* Botón lupa para móviles al lado del carrito */}
+            <button 
+              className="mobile-search-toggle-btn"
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              aria-label={isMobileSearchOpen ? "Cerrar búsqueda" : "Abrir buscador"}
+            >
+              <Search size={20} color="#111111" />
+            </button>
+
             <button 
               className="desktop-cart-icon" 
               onClick={() => setIsCartOpenMobile(true)}
@@ -685,28 +695,31 @@ function App() {
           </div>
         </header>
 
-        {/* Buscador para dispositivos móviles */}
-        <div className="mobile-search-bar-container">
-          <div className="mobile-search-bar">
-            <Search size={18} className="nav-search-icon" />
-            <input
-              type="text"
-              placeholder="¿Qué se te antoja hoy? Buscar..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="mobile-search-input"
-            />
-            {searchQuery && (
-              <button 
-                className="nav-search-clear" 
-                onClick={() => setSearchQuery('')}
-                aria-label="Limpiar búsqueda"
-              >
-                <X size={16} />
-              </button>
-            )}
+        {/* Buscador desplegable para móviles al pulsar la lupa */}
+        {isMobileSearchOpen && (
+          <div className="mobile-search-bar-container is-open">
+            <div className="mobile-search-bar">
+              <Search size={18} className="nav-search-icon" />
+              <input
+                type="text"
+                placeholder="¿Qué se te antoja hoy? Buscar..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="mobile-search-input"
+                autoFocus
+              />
+              {searchQuery && (
+                <button 
+                  className="nav-search-clear" 
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Banner Principal Minimalista Premium */}
         <section className="hero-banner-minimal">
@@ -1157,7 +1170,7 @@ function App() {
               ) : (
                 <div className="pickup-summary-card">
                   <div className="pickup-summary-header">
-                    <Store size={22} color="var(--primary-color, #D4A017)" />
+                    <Store size={22} color="var(--primary-color, #B30401)" />
                     <h4>Información de Retiro</h4>
                   </div>
                   <p className="pickup-address"><strong>Punto de recogida:</strong> {settings.kitchen_address || settings.address || 'Punto de venta principal'}</p>
@@ -1224,7 +1237,7 @@ function App() {
                     />
                   </div>
                   {Number(customer.cashAmount) > orderTotal && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--primary-color, #D4A017)', fontWeight: '600' }}>
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--primary-color, #B30401)', fontWeight: '700' }}>
                       💵 Cambio: {formatter.format(Number(customer.cashAmount) - orderTotal)}
                     </div>
                   )}
@@ -1233,16 +1246,16 @@ function App() {
 
               {customer.paymentMethod === 'transferencia' && customer.transferBank === 'nequi' && (
                 <div className="transfer-info animate-in fade-in">
-                  <p className="transfer-desc" style={{ marginBottom: '8px', fontWeight: '800', color: '#FFFFFF', fontSize: '0.95rem' }}>
+                  <p className="transfer-desc" style={{ marginBottom: '8px', fontWeight: '800', color: '#111111', fontSize: '0.95rem' }}>
                     Transfiere a nuestra cuenta Nequi:
                   </p>
                   <button type="button" className="copy-btn" onClick={() => copyToClipboard(settings.nequi_number, 'nequi')}>
-                    <span className="copy-text" style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '1rem' }}>
+                    <span className="copy-text" style={{ color: '#111111', fontWeight: '800', fontSize: '1rem' }}>
                       Nequi: {settings.nequi_number || 'No configurado'}
                     </span>
-                    {copiedNequi ? <Check size={18} color="#4ade80" /> : <Copy size={18} color="var(--primary-color, #D4A017)" />}
+                    {copiedNequi ? <Check size={18} color="#16a34a" /> : <Copy size={18} color="var(--primary-color, #B30401)" />}
                   </button>
-                  <p style={{ marginTop: '8px', fontSize: '0.8rem', color: '#A3A3A3', lineHeight: '1.4' }}>
+                  <p style={{ marginTop: '8px', fontSize: '0.8rem', color: '#666666', lineHeight: '1.4' }}>
                     💡 Toca para copiar el número. Envía el comprobante por WhatsApp al confirmar.
                   </p>
                 </div>
@@ -1250,16 +1263,16 @@ function App() {
 
               {customer.paymentMethod === 'transferencia' && customer.transferBank === 'banco' && (
                 <div className="transfer-info animate-in fade-in">
-                  <p className="transfer-desc" style={{ marginBottom: '8px', fontWeight: '800', color: '#FFFFFF', fontSize: '0.95rem' }}>
+                  <p className="transfer-desc" style={{ marginBottom: '8px', fontWeight: '800', color: '#111111', fontSize: '0.95rem' }}>
                     Transfiere mediante Llave Bre-B:
                   </p>
                   <button type="button" className="copy-btn" onClick={() => copyToClipboard(settings.bancolombia_number, 'banco')}>
-                    <span className="copy-text" style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '1rem' }}>
+                    <span className="copy-text" style={{ color: '#111111', fontWeight: '800', fontSize: '1rem' }}>
                       Llave Bre-B: {settings.bancolombia_number || 'No configurado'}
                     </span>
-                    {copiedBanco ? <Check size={18} color="#4ade80" /> : <Copy size={18} color="var(--primary-color, #D4A017)" />}
+                    {copiedBanco ? <Check size={18} color="#16a34a" /> : <Copy size={18} color="var(--primary-color, #B30401)" />}
                   </button>
-                  <p style={{ marginTop: '8px', fontSize: '0.8rem', color: '#A3A3A3', lineHeight: '1.4' }}>
+                  <p style={{ marginTop: '8px', fontSize: '0.8rem', color: '#666666', lineHeight: '1.4' }}>
                     💡 Toca para copiar la llave. Envía el comprobante por WhatsApp al confirmar.
                   </p>
                 </div>
@@ -1282,7 +1295,7 @@ function App() {
               {checkoutStep > 1 && customer.deliveryType === 'recoger' && (
                 <div className="cart-summary">
                   <span>Domicilio</span>
-                  <span style={{ color: 'var(--primary-color, #D4A017)' }}>Recoger en local (Gratis)</span>
+                  <span style={{ color: 'var(--primary-color, #B30401)', fontWeight: '700' }}>Recoger en local (Gratis)</span>
                 </div>
               )}
               <div className="checkout-total">
