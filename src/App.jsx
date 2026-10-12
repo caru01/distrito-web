@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Minus, Trash2, ShoppingBag, ShoppingCart, Copy, Check, X, ArrowLeft, Lock, CreditCard, Wallet, Smartphone, Banknote, Menu, Download, Share, Car, Store, MapPin, Clock, KeyRound, Search, Phone, Instagram, Facebook, MessageCircle, ExternalLink } from 'lucide-react';
 import logoImg from './assets/logo-horizontal.png';
 import heroLogo from './assets/logo-hero.png';
+import districStar from './assets/distric-star.png';
 
 import { API_URL } from './config/api';
 import OrderTracker from './components/OrderTracker';
@@ -62,6 +63,7 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [announcement, setAnnouncement] = useState(null);
+  const [promoCard, setPromoCard] = useState(null);
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [horariosStatus, setHorariosStatus] = useState({ isOpen: false, statusText: 'Consultando horario…' });
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -249,6 +251,9 @@ function App() {
           if (data.categories) {
             setCategoriesData(data.categories);
           }
+          if (data.promoCard !== undefined) {
+            setPromoCard(data.promoCard);
+          }
           setSettings(data.settings || {});
           applyWebTheme(data.settings || {});
           setCustomer((current) => ({
@@ -262,6 +267,9 @@ function App() {
               setAnnouncement(campaign.announcement);
               setIsAnnouncementOpen(true);
               recordAnnouncement(campaign.announcement.id, 'view');
+            }
+            if (campaign.promoCard !== undefined) {
+              setPromoCard(campaign.promoCard);
             }
           }).catch(() => {});
         }
@@ -283,38 +291,45 @@ function App() {
 
   useEffect(() => {
     const registerPush = async () => {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-          if (Notification.permission === 'granted') {
-            const subscription = await registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: 'BBCJtzBn22IJcujyWlCCwtSAyWLfsiELTqWAjQcEiOuPX0yiad9P5LIpMJv5T8VwkHJU0vxLHTqFYImzLYWBQyU'
-            });
-            await fetch(`${API_URL}/push/subscribe`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ subscription })
-            });
-          } else if (Notification.permission !== 'denied') {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-              const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: 'BBCJtzBn22IJcujyWlCCwtSAyWLfsiELTqWAjQcEiOuPX0yiad9P5LIpMJv5T8VwkHJU0vxLHTqFYImzLYWBQyU'
-              });
-              await fetch(`${API_URL}/push/subscribe`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subscription })
-              });
-            }
+      // Solo en entornos HTTPS o localhost que soporten ServiceWorker y Push
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (!window.isSecureContext && window.location.hostname !== 'localhost') return;
+
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        // Si no hay permiso concedido previamente, no forzar prompt intrusivo al cargar
+        if (Notification.permission !== 'granted') return;
+
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          const rawKey = 'BBCJtzBn22IJcujyWlCCwtSAyWLfsiELTqWAjQcEiOuPX0yiad9P5LIpMJv5T8VwkHJU0vxLHTqFYImzLYWBQyU';
+          const padding = '='.repeat((4 - (rawKey.length % 4)) % 4);
+          const base64 = (rawKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+          const rawData = window.atob(base64);
+          const applicationServerKey = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            applicationServerKey[i] = rawData.charCodeAt(i);
           }
-        } catch (error) {
-          console.error('Error Push:', error);
+
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey
+          });
         }
+
+        if (subscription) {
+          await fetch(`${API_URL}/push/subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscription })
+          });
+        }
+      } catch (error) {
+        // En desarrollo local por IP o cuando los servidores de Google FCM / Mozilla no están accesibles
+        console.warn('Suscripción Push no disponible en este entorno:', error?.message || error);
       }
     };
+
     registerPush();
   }, []);
 
@@ -364,6 +379,23 @@ function App() {
     }
     return list;
   }, [activeCategory, products, searchQuery]);
+
+  const promoFields = useMemo(() => {
+    if (!promoCard || !promoCard.is_active) return null;
+    let parsed = {};
+    try {
+      parsed = typeof promoCard.body === 'string' ? JSON.parse(promoCard.body) : (promoCard.body || {});
+    } catch {}
+    return {
+      day: parsed.day || 'MARTES',
+      date: parsed.date || '13 DE OCTUBRE',
+      headline: parsed.headline || 'DOMICILIO',
+      highlight: parsed.highlight || 'GRATIS',
+      condition: parsed.condition || 'En compras superiores a',
+      price: parsed.price || '$ 30.000 COP',
+      terms: parsed.terms || '* Términos y condiciones aplican.'
+    };
+  }, [promoCard]);
 
   const addToCart = (product, quantity = 1) => {
     if (product.track_stock && Number(product.stock) <= 0) return;
@@ -523,9 +555,59 @@ function App() {
 
   if (loading) {
     return (
-      <div className="global-loader-container">
-        <div className="professional-spinner"></div>
-        <p>Cargando menú...</p>
+      <div 
+        className="global-loader-container" 
+        role="status" 
+        aria-live="polite" 
+        aria-label="Cargando menú. Preparando tu experiencia"
+      >
+        <div className="distric-loader-spinner-wrapper" aria-hidden="true">
+          <svg 
+            className="distric-loader-svg" 
+            viewBox="0 0 100 100" 
+            fill="none" 
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Anillo circular gris claro de fondo */}
+            <circle 
+              className="distric-loader-bg-ring" 
+              cx="50" 
+              cy="50" 
+              r="44" 
+              stroke="#E5E5E5" 
+              strokeWidth="5.5" 
+            />
+            {/* Segmento de progreso rojo con rotación continua */}
+            <circle 
+              className="distric-loader-progress-ring" 
+              cx="50" 
+              cy="50" 
+              r="44" 
+              stroke="#B30401" 
+              strokeWidth="5.5" 
+              strokeLinecap="round" 
+              strokeDasharray="80 200" 
+            />
+          </svg>
+          {/* Estrella de ocho puntas oficial de la marca en el centro */}
+          <div className="distric-loader-star-center">
+            <img 
+              src={districStar} 
+              alt="" 
+              className="distric-loader-star-img" 
+              loading="eager" 
+              decoding="sync"
+            />
+          </div>
+        </div>
+
+        <div className="distric-loader-text-block">
+          <h1 className="distric-loader-title">Cargando menú...</h1>
+          <p className="distric-loader-subtitle">
+            <span>PREPARANDO</span>
+            <span>TU EXPERIENCIA</span>
+          </p>
+        </div>
       </div>
     );
   }
@@ -636,7 +718,7 @@ function App() {
             </div>
 
             <div 
-              className={`status-indicator ${!isOpen ? 'is-closed' : ''}`}
+              className={`status-indicator ${isOpen ? 'is-open' : 'is-closed'}`}
               role={!isOpen ? 'button' : undefined}
               tabIndex={!isOpen ? 0 : undefined}
               title={!isOpen ? 'Restaurante cerrado. Toca para ver horarios' : undefined}
@@ -752,16 +834,14 @@ function App() {
                 <p className="key-info-text">
                   {settings.kitchen_address || settings.address || 'Ubicación disponible en tienda'}
                 </p>
-                {(settings.google_maps_url || settings.maps_url || settings.kitchen_address || settings.address) && (
-                  <a 
-                    href={settings.google_maps_url || settings.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.kitchen_address || settings.address)}`}
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="key-info-action key-info-link"
-                  >
-                    Ver en el mapa <ExternalLink size={13} className="inline-action-icon" />
-                  </a>
-                )}
+                <a 
+                  href={settings.google_maps_url || settings.maps_url || 'https://maps.app.goo.gl/UZruoBZWSpVQcaND8'}
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="key-info-action key-info-link"
+                >
+                  Ver en el mapa <ExternalLink size={13} className="inline-action-icon" />
+                </a>
               </div>
             </div>
 
@@ -863,6 +943,39 @@ function App() {
               })}
             </div>
 
+            {/* BANNER PROMOCIONAL COMPACTO PARA MÓVILES (debajo de categorías y antes de productos) */}
+            {promoFields && (
+              <aside 
+                className="promo-delivery-banner-mobile"
+                aria-label={`Promoción Domicilio Gratis ${promoFields.day} ${promoFields.date}`}
+              >
+                <div className="promo-mobile-badge-col">
+                  <span className="promo-mobile-day">{promoFields.day}</span>
+                  <span className="promo-mobile-date">{promoFields.date}</span>
+                </div>
+                <div className="promo-mobile-center-col">
+                  <div className="promo-mobile-title-row">
+                    <span className="promo-mobile-icon-wrap" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="5.5" cy="17.5" r="3.5" />
+                        <circle cx="18.5" cy="17.5" r="3.5" />
+                        <path d="M15 6h-3l-2.5 5H18l-1.5-5z" />
+                        <path d="M9.5 11l-3 6.5" />
+                        <path d="M14 17.5h-4.5" />
+                        <path d="M18.5 14a3.5 3.5 0 0 0-3.5-3.5h-1" />
+                      </svg>
+                    </span>
+                    <strong className="promo-mobile-headline">{promoFields.headline} <span className="text-red">{promoFields.highlight}</span></strong>
+                    <img src={districStar} alt="" className="promo-mobile-star" aria-hidden="true" />
+                  </div>
+                  <div className="promo-mobile-condition">
+                    {promoFields.condition} <strong className="promo-mobile-price">{promoFields.price}</strong>
+                  </div>
+                  <span className="promo-mobile-terms">{promoFields.terms}</span>
+                </div>
+              </aside>
+            )}
+
         {/* Product Grid */}
         <div className="product-grid">
           {filteredProducts.map(product => {
@@ -891,10 +1004,22 @@ function App() {
               >
                 <div className="product-image-container">
                   {product.image ? (
-                    <img src={product.image} alt={product.title} className="product-image" loading="lazy" decoding="async" />
-                  ) : (
-                    <div className="product-placeholder">Sin Imagen</div>
-                  )}
+                    <img 
+                      src={product.image} 
+                      alt={product.title} 
+                      className="product-image" 
+                      loading="lazy" 
+                      decoding="async"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const placeholder = e.currentTarget.parentElement.querySelector('.product-placeholder');
+                        if (placeholder) placeholder.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div className="product-placeholder" style={{ display: product.image ? 'none' : 'flex' }}>
+                    Sin Imagen
+                  </div>
                   {soldOut && <span className="sold-out-label">AGOTADO</span>}
                 </div>
                 <div className="product-info">
@@ -956,6 +1081,51 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* TARJETA PROMOCIONAL LATERAL EN ESCRITORIO (A la derecha del catálogo) */}
+      {promoFields && (
+        <aside 
+          className="promo-delivery-sidebar-desktop"
+          aria-label={`Promoción Domicilio Gratis ${promoFields.day} ${promoFields.date}`}
+        >
+          <div className="promo-card-inner">
+            <div className="promo-card-top-icon-row">
+              <span className="promo-motorcycle-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#B30401" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="5.5" cy="17.5" r="3.5" />
+                  <circle cx="18.5" cy="17.5" r="3.5" />
+                  <path d="M15 6h-3l-2.5 5H18l-1.5-5z" />
+                  <path d="M9.5 11l-3 6.5" />
+                  <path d="M14 17.5h-4.5" />
+                  <path d="M18.5 14a3.5 3.5 0 0 0-3.5-3.5h-1" />
+                </svg>
+              </span>
+              <img src={districStar} alt="" className="promo-card-star-decor" aria-hidden="true" />
+            </div>
+
+            <div className="promo-card-dates-box">
+              <span className="promo-card-day">{promoFields.day}</span>
+              <span className="promo-card-date">{promoFields.date}</span>
+            </div>
+
+            <div className="promo-card-headline">
+              {promoFields.headline}
+              <span className="promo-card-headline-highlight">{promoFields.highlight}</span>
+            </div>
+
+            <div className="promo-card-divider"></div>
+
+            <div className="promo-card-condition-box">
+              <p className="promo-card-condition-label">{promoFields.condition}</p>
+              <p className="promo-card-condition-price">{promoFields.price}</p>
+            </div>
+
+            <div className="promo-card-footer">
+              <span className="promo-card-terms">{promoFields.terms}</span>
+            </div>
+          </div>
+        </aside>
+      )}
     </div>
 
       {/* Cart Drawer & Overlay (Disponible cuando se toca "Ver pedido" o el icono del carrito) */}
@@ -1264,12 +1434,6 @@ function App() {
                   <span>{deliveryFee > 0 ? formatter.format(deliveryFee) : 'Gratis'}</span>
                 </div>
               )}
-              {checkoutStep > 1 && customer.deliveryType === 'recoger' && (
-                <div className="cart-summary">
-                  <span>Domicilio</span>
-                  <span style={{ color: 'var(--primary-color, #B30401)', fontWeight: '700' }}>Recoger en local (Gratis)</span>
-                </div>
-              )}
               <div className="checkout-total">
                 <span>Total a Pagar</span>
                 <span>{formatter.format(checkoutStep === 1 ? subtotal : orderTotal)}</span>
@@ -1287,10 +1451,14 @@ function App() {
                   {cart.length > 0 && (
                     <button 
                       className="empty-cart-btn" 
-                      onClick={() => setCart([])}
+                      onClick={() => {
+                        setCart([]);
+                        setIsCartOpenMobile(false);
+                        setCheckoutStep(1);
+                      }}
                       style={{ marginTop: '0.75rem' }}
                     >
-                      Vaciar Pedido
+                      Vaciar Carrito
                     </button>
                   )}
                 </>
@@ -1543,12 +1711,16 @@ function App() {
                   src={selectedProductDetail.image} 
                   alt={selectedProductDetail.title} 
                   className="product-detail-image" 
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const placeholder = e.currentTarget.parentElement.querySelector('.product-detail-placeholder');
+                    if (placeholder) placeholder.style.display = 'flex';
+                  }}
                 />
-              ) : (
-                <div className="product-detail-placeholder">
-                  <span>Sin Imagen</span>
-                </div>
-              )}
+              ) : null}
+              <div className="product-detail-placeholder" style={{ display: selectedProductDetail.image ? 'none' : 'flex' }}>
+                <span>Sin Imagen</span>
+              </div>
               {((selectedProductDetail.track_stock && Number(selectedProductDetail.stock) <= 0) || selectedProductDetail.status === 'Agotado') && (
                 <span className="product-detail-soldout-badge">AGOTADO</span>
               )}
