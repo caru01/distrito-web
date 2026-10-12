@@ -65,6 +65,8 @@ function App() {
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [horariosStatus, setHorariosStatus] = useState({ isOpen: false, statusText: 'Consultando horario…' });
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [selectedProductDetail, setSelectedProductDetail] = useState(null);
+  const [detailModalQty, setDetailModalQty] = useState(1);
   const [isTrackingOpen, setIsTrackingOpen] = useState(() => Boolean(trackingOrderFromUrl()));
   const [latestOrder, setLatestOrder] = useState(() => {
     try {
@@ -363,14 +365,15 @@ function App() {
     return list;
   }, [activeCategory, products, searchQuery]);
 
-  const addToCart = (product) => {
+  const addToCart = (product, quantity = 1) => {
     if (product.track_stock && Number(product.stock) <= 0) return;
+    const qtyToAdd = Math.max(1, Number(quantity) || 1);
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + qtyToAdd } : item);
       }
-      return [...prev, { ...product, qty: 1 }];
+      return [...prev, { ...product, qty: qtyToAdd }];
     });
   };
 
@@ -529,27 +532,6 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Barra inferior flotante cuando se agregan productos ("Ver pedido") */}
-      {cartTotalItems > 0 && !isCartOpenMobile && (
-        <div 
-          className="mobile-cart-bar floating-order-bar" 
-          onClick={() => setIsCartOpenMobile(true)}
-          role="button"
-          tabIndex={0}
-          aria-label="Ver pedido"
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsCartOpenMobile(true); } }}
-        >
-          <div className="mobile-cart-bar-items">
-            <span className="badge-count">{cartTotalItems}</span>
-          </div>
-          <div className="mobile-cart-bar-center">
-            <ShoppingBag size={18} className="order-bar-icon" />
-            <span className="mobile-cart-bar-text">Ver pedido</span>
-          </div>
-          <span className="mobile-cart-bar-total">{formatter.format(orderTotal)}</span>
-        </div>
-      )}
-
       {/* Main Area */}
       <main className="main-content">
         {/* Top Navbar Minimalista Premium */}
@@ -895,23 +877,15 @@ function App() {
                 aria-disabled={soldOut || !isOpen}
                 aria-label={`Agregar ${product.title} al pedido`}
                 onClick={(event) => {
-                  if (event.target.closest('button, a, input, .interactive-star')) return;
-                  if (soldOut) return;
-                  if (!isOpen) {
-                    setIsScheduleModalOpen(true);
-                  } else {
-                    addToCart(product);
-                  }
+                  if (event.target.closest('button, a, input, .interactive-star, .product-qty-controls')) return;
+                  setSelectedProductDetail(product);
+                  setDetailModalQty(1);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
-                    if (soldOut) return;
                     event.preventDefault();
-                    if (!isOpen) {
-                      setIsScheduleModalOpen(true);
-                    } else {
-                      addToCart(product);
-                    }
+                    setSelectedProductDetail(product);
+                    setDetailModalQty(1);
                   }
                 }}
               >
@@ -962,12 +936,10 @@ function App() {
                     ) : (
                       <button 
                         className="add-btn" 
-                        onClick={() => {
-                          if (!isOpen) {
-                            setIsScheduleModalOpen(true);
-                          } else {
-                            addToCart(product);
-                          }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProductDetail(product);
+                          setDetailModalQty(1);
                         }} 
                         disabled={soldOut}
                       >
@@ -1519,10 +1491,10 @@ function App() {
         <div className="install-banner" style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 40px)', maxWidth: '400px', backgroundColor: '#111', borderRadius: '16px', padding: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)', border: '1px solid #B30401', zIndex: 10000, display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="install-banner-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div className="install-banner-brand" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <img src={settings.logo || logoImg} alt="Logo" style={{ width: '48px', height: '48px', objectFit: 'contain', backgroundColor: '#000', borderRadius: '12px', padding: '4px' }} />
+              <img src="/icon-192.png" alt="Distric House" style={{ width: '48px', height: '48px', objectFit: 'contain', backgroundColor: '#FFF', borderRadius: '12px', padding: '2px', border: '1px solid #E5E7EB' }} />
               <div>
-                <h3 style={{ margin: 0, color: '#FFF', fontSize: '18px', fontWeight: '800' }}>Instala nuestra App</h3>
-                <p style={{ margin: '4px 0 0 0', color: '#BDBDBD', fontSize: '14px' }}>Pide más rápido y seguro</p>
+                <h3 style={{ margin: 0, color: '#FFF', fontSize: '18px', fontWeight: '800' }}>Instala Distric House</h3>
+                <p style={{ margin: '4px 0 0 0', color: '#BDBDBD', fontSize: '14px' }}>Pide más rápido y directo</p>
               </div>
             </div>
             <button className="install-banner-close" aria-label="Cerrar instalación" onClick={() => setShowInstallBanner(false)} style={{ background: 'transparent', border: 'none', color: '#BDBDBD', cursor: 'pointer', padding: '0' }}>
@@ -1543,6 +1515,131 @@ function App() {
         </div>
       )}
 
+      {/* MODAL VENTANA DE DETALLE DE PRODUCTO */}
+      {selectedProductDetail && (
+        <div 
+          className="product-detail-overlay" 
+          onClick={() => setSelectedProductDetail(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div 
+            className="product-detail-modal" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Botón cerrar */}
+            <button 
+              className="product-detail-close-btn" 
+              onClick={() => setSelectedProductDetail(null)}
+              aria-label="Cerrar detalle de producto"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Cabecera / Imagen del producto */}
+            <div className="product-detail-image-wrap">
+              {selectedProductDetail.image ? (
+                <img 
+                  src={selectedProductDetail.image} 
+                  alt={selectedProductDetail.title} 
+                  className="product-detail-image" 
+                />
+              ) : (
+                <div className="product-detail-placeholder">
+                  <span>Sin Imagen</span>
+                </div>
+              )}
+              {((selectedProductDetail.track_stock && Number(selectedProductDetail.stock) <= 0) || selectedProductDetail.status === 'Agotado') && (
+                <span className="product-detail-soldout-badge">AGOTADO</span>
+              )}
+            </div>
+
+            {/* Cuerpo del Modal */}
+            <div className="product-detail-body">
+              <div className="product-detail-meta">
+                <span className="product-detail-category-badge">
+                  {categoriesData.find(c => c.id === selectedProductDetail.category_id)?.name || 'Especialidad'}
+                </span>
+                {selectedProductDetail.rating_count > 0 && (
+                  <div className="product-detail-rating">
+                    <span className="star-icon">★</span>
+                    <strong>{((selectedProductDetail.rating_sum || 0) / (selectedProductDetail.rating_count || 1)).toFixed(1)}</strong>
+                    <span className="rating-count-sub">({selectedProductDetail.rating_count})</span>
+                  </div>
+                )}
+              </div>
+
+              <h2 className="product-detail-title">{selectedProductDetail.title}</h2>
+              <div className="product-detail-price-main">
+                {formatter.format(selectedProductDetail.price)}
+              </div>
+
+              {/* Caja de Descripción Completa y Detallada */}
+              <div className="product-detail-desc-box">
+                <h4 className="product-detail-desc-label">DESCRIPCIÓN</h4>
+                <p className="product-detail-desc-text">
+                  {selectedProductDetail.description || 'Hamburguesa artesanal preparada al instante con ingredientes 100% frescos y seleccionados de primera calidad.'}
+                </p>
+              </div>
+
+              {/* Barra de acción: Selector de cantidad + Botón Agregar */}
+              <div className="product-detail-footer">
+                <div className="product-detail-qty-picker">
+                  <button 
+                    type="button" 
+                    className="detail-qty-btn" 
+                    onClick={() => setDetailModalQty(q => Math.max(1, q - 1))}
+                    disabled={detailModalQty <= 1}
+                    aria-label="Disminuir cantidad"
+                  >
+                    <Minus size={18} />
+                  </button>
+                  <span className="detail-qty-number">{detailModalQty}</span>
+                  <button 
+                    type="button" 
+                    className="detail-qty-btn" 
+                    onClick={() => {
+                      if (selectedProductDetail.track_stock && detailModalQty >= Number(selectedProductDetail.stock || 0)) return;
+                      setDetailModalQty(q => q + 1);
+                    }}
+                    aria-label="Aumentar cantidad"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+
+                <button 
+                  type="button"
+                  className="product-detail-add-btn"
+                  onClick={() => {
+                    if (!horariosStatus?.isOpen) {
+                      setIsScheduleModalOpen(true);
+                      return;
+                    }
+                    if ((selectedProductDetail.track_stock && Number(selectedProductDetail.stock) <= 0) || selectedProductDetail.status === 'Agotado') {
+                      return;
+                    }
+                    addToCart(selectedProductDetail, detailModalQty);
+                    setSelectedProductDetail(null);
+                  }}
+                  disabled={(selectedProductDetail.track_stock && Number(selectedProductDetail.stock) <= 0) || selectedProductDetail.status === 'Agotado'}
+                >
+                  <ShoppingBag size={20} />
+                  <span>
+                    {(selectedProductDetail.track_stock && Number(selectedProductDetail.stock) <= 0) || selectedProductDetail.status === 'Agotado'
+                      ? 'AGOTADO'
+                      : !horariosStatus?.isOpen
+                        ? 'HORARIO CERRADO'
+                        : `AGREGAR • ${formatter.format(selectedProductDetail.price * detailModalQty)}`
+                    }
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <OrderTracker open={isTrackingOpen} onClose={() => setIsTrackingOpen(false)} initialOrder={latestOrder} />
 
       <ScheduleModal
@@ -1552,6 +1649,27 @@ function App() {
         settings={settings}
         defaultLogo={logoImg}
       />
+
+      {/* BARRA INFERIOR FLOTANTE ("VER PEDIDO") */}
+      {cartTotalItems > 0 && !isCartOpenMobile && (
+        <aside 
+          className="mobile-cart-bar floating-order-bar" 
+          onClick={() => setIsCartOpenMobile(true)}
+          role="button"
+          tabIndex={0}
+          aria-label="Ver pedido"
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsCartOpenMobile(true); } }}
+        >
+          <div className="mobile-cart-bar-items">
+            <span className="badge-count">{cartTotalItems}</span>
+          </div>
+          <div className="mobile-cart-bar-center">
+            <ShoppingBag size={20} className="order-bar-icon" />
+            <span className="mobile-cart-bar-text">VER PEDIDO</span>
+          </div>
+          <span className="mobile-cart-bar-total">{formatter.format(orderTotal)}</span>
+        </aside>
+      )}
 
     </div>
   );
