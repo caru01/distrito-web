@@ -1651,7 +1651,7 @@ function App() {
       />
 
       {/* BARRA INFERIOR FLOTANTE ("VER PEDIDO") */}
-      {cartTotalItems > 0 && !isCartOpenMobile && (
+      {cartTotalItems > 0 && !isCartOpenMobile && !selectedProductDetail && (
         <aside 
           className="mobile-cart-bar floating-order-bar" 
           onClick={() => setIsCartOpenMobile(true)}
