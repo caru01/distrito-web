@@ -64,6 +64,7 @@ function App() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [announcement, setAnnouncement] = useState(null);
   const [promoCard, setPromoCard] = useState(null);
+  const [promoCards, setPromoCards] = useState([]);
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [horariosStatus, setHorariosStatus] = useState({ isOpen: false, statusText: 'Consultando horario…' });
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -251,8 +252,12 @@ function App() {
           if (data.categories) {
             setCategoriesData(data.categories);
           }
-          if (data.promoCard !== undefined) {
+          if (data.promoCards && Array.isArray(data.promoCards)) {
+            setPromoCards(data.promoCards);
+            if (data.promoCards.length > 0) setPromoCard(data.promoCards[0]);
+          } else if (data.promoCard !== undefined) {
             setPromoCard(data.promoCard);
+            setPromoCards(data.promoCard ? [data.promoCard] : []);
           }
           setSettings(data.settings || {});
           applyWebTheme(data.settings || {});
@@ -268,8 +273,12 @@ function App() {
               setIsAnnouncementOpen(true);
               recordAnnouncement(campaign.announcement.id, 'view');
             }
-            if (campaign.promoCard !== undefined) {
+            if (campaign.promoCards && Array.isArray(campaign.promoCards)) {
+              setPromoCards(campaign.promoCards);
+              if (campaign.promoCards.length > 0) setPromoCard(campaign.promoCards[0]);
+            } else if (campaign.promoCard !== undefined) {
               setPromoCard(campaign.promoCard);
+              setPromoCards(campaign.promoCard ? [campaign.promoCard] : []);
             }
           }).catch(() => {});
         }
@@ -380,22 +389,29 @@ function App() {
     return list;
   }, [activeCategory, products, searchQuery]);
 
-  const promoFields = useMemo(() => {
-    if (!promoCard || !promoCard.is_active) return null;
-    let parsed = {};
-    try {
-      parsed = typeof promoCard.body === 'string' ? JSON.parse(promoCard.body) : (promoCard.body || {});
-    } catch {}
-    return {
-      day: parsed.day || 'MARTES',
-      date: parsed.date || '13 DE OCTUBRE',
-      headline: parsed.headline || 'DOMICILIO',
-      highlight: parsed.highlight || 'GRATIS',
-      condition: parsed.condition || 'En compras superiores a',
-      price: parsed.price || '$ 30.000 COP',
-      terms: parsed.terms || '* Términos y condiciones aplican.'
-    };
-  }, [promoCard]);
+  const parsedPromoCards = useMemo(() => {
+    return (promoCards || [])
+      .filter(card => card && card.is_active !== false)
+      .map(card => {
+        let parsed = {};
+        try {
+          parsed = typeof card.body === 'string' ? JSON.parse(card.body) : (card.body || {});
+        } catch {}
+        return {
+          id: card.id,
+          title: card.title,
+          day: parsed.day || 'MARTES',
+          date: parsed.date || '13 DE OCTUBRE',
+          headline: parsed.headline || 'DOMICILIO',
+          highlight: parsed.highlight || 'GRATIS',
+          condition: parsed.condition || 'En compras superiores a',
+          price: parsed.price || card.cta_label || '$ 30.000 COP',
+          terms: parsed.terms || '* Términos y condiciones aplican.'
+        };
+      });
+  }, [promoCards]);
+
+  const promoFields = parsedPromoCards[0] || null;
 
   const addToCart = (product, quantity = 1) => {
     if (product.track_stock && Number(product.stock) <= 0) return;
@@ -943,37 +959,42 @@ function App() {
               })}
             </div>
 
-            {/* BANNER PROMOCIONAL COMPACTO PARA MÓVILES (debajo de categorías y antes de productos) */}
-            {promoFields && (
-              <aside 
-                className="promo-delivery-banner-mobile"
-                aria-label={`Promoción Domicilio Gratis ${promoFields.day} ${promoFields.date}`}
-              >
-                <div className="promo-mobile-badge-col">
-                  <span className="promo-mobile-day">{promoFields.day}</span>
-                  <span className="promo-mobile-date">{promoFields.date}</span>
-                </div>
-                <div className="promo-mobile-center-col">
-                  <div className="promo-mobile-title-row">
-                    <span className="promo-mobile-icon-wrap" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="5.5" cy="17.5" r="3.5" />
-                        <circle cx="18.5" cy="17.5" r="3.5" />
-                        <path d="M15 6h-3l-2.5 5H18l-1.5-5z" />
-                        <path d="M9.5 11l-3 6.5" />
-                        <path d="M14 17.5h-4.5" />
-                        <path d="M18.5 14a3.5 3.5 0 0 0-3.5-3.5h-1" />
-                      </svg>
-                    </span>
-                    <strong className="promo-mobile-headline">{promoFields.headline} <span className="text-red">{promoFields.highlight}</span></strong>
-                    <img src={districStar} alt="" className="promo-mobile-star" aria-hidden="true" />
-                  </div>
-                  <div className="promo-mobile-condition">
-                    {promoFields.condition} <strong className="promo-mobile-price">{promoFields.price}</strong>
-                  </div>
-                  <span className="promo-mobile-terms">{promoFields.terms}</span>
-                </div>
-              </aside>
+            {/* TARJETAS DE ANUNCIO EN MÓVILES (aparecen abajo de cada uno) */}
+            {parsedPromoCards.length > 0 && (
+              <div className="promo-delivery-mobile-stack">
+                {parsedPromoCards.map(promo => (
+                  <aside 
+                    key={promo.id}
+                    className="promo-delivery-banner-mobile"
+                    aria-label={`Tarjeta de Anuncio ${promo.day} ${promo.date}`}
+                  >
+                    <div className="promo-mobile-badge-col">
+                      <span className="promo-mobile-day">{promo.day}</span>
+                      <span className="promo-mobile-date">{promo.date}</span>
+                    </div>
+                    <div className="promo-mobile-center-col">
+                      <div className="promo-mobile-title-row">
+                        <span className="promo-mobile-icon-wrap" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="5.5" cy="17.5" r="3.5" />
+                            <circle cx="18.5" cy="17.5" r="3.5" />
+                            <path d="M15 6h-3l-2.5 5H18l-1.5-5z" />
+                            <path d="M9.5 11l-3 6.5" />
+                            <path d="M14 17.5h-4.5" />
+                            <path d="M18.5 14a3.5 3.5 0 0 0-3.5-3.5h-1" />
+                          </svg>
+                        </span>
+                        <strong className="promo-mobile-headline">{promo.headline} <span className="text-red">{promo.highlight}</span></strong>
+                        <img src={districStar} alt="" className="promo-mobile-star" aria-hidden="true" />
+                      </div>
+                      <div className="promo-mobile-condition">
+                        {promo.condition} <strong className="promo-mobile-price">{promo.price}</strong>
+                      </div>
+                      <span className="promo-mobile-terms">{promo.terms}</span>
+                    </div>
+                  </aside>
+                ))}
+              </div>
             )}
 
         {/* Product Grid */}
@@ -1082,48 +1103,50 @@ function App() {
         </div>
       </div>
 
-      {/* TARJETA PROMOCIONAL LATERAL EN ESCRITORIO (A la derecha del catálogo) */}
-      {promoFields && (
+      {/* TARJETAS DE ANUNCIO LATERALES EN ESCRITORIO (A la derecha del catálogo, aparecen abajo de cada uno) */}
+      {parsedPromoCards.length > 0 && (
         <aside 
           className="promo-delivery-sidebar-desktop"
-          aria-label={`Promoción Domicilio Gratis ${promoFields.day} ${promoFields.date}`}
+          aria-label="Tarjetas de Anuncio"
         >
-          <div className="promo-card-inner">
-            <div className="promo-card-top-icon-row">
-              <span className="promo-motorcycle-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#B30401" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="5.5" cy="17.5" r="3.5" />
-                  <circle cx="18.5" cy="17.5" r="3.5" />
-                  <path d="M15 6h-3l-2.5 5H18l-1.5-5z" />
-                  <path d="M9.5 11l-3 6.5" />
-                  <path d="M14 17.5h-4.5" />
-                  <path d="M18.5 14a3.5 3.5 0 0 0-3.5-3.5h-1" />
-                </svg>
-              </span>
-              <img src={districStar} alt="" className="promo-card-star-decor" aria-hidden="true" />
-            </div>
+          {parsedPromoCards.map(promo => (
+            <div key={promo.id} className="promo-card-inner">
+              <div className="promo-card-top-icon-row">
+                <span className="promo-motorcycle-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#B30401" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="5.5" cy="17.5" r="3.5" />
+                    <circle cx="18.5" cy="17.5" r="3.5" />
+                    <path d="M15 6h-3l-2.5 5H18l-1.5-5z" />
+                    <path d="M9.5 11l-3 6.5" />
+                    <path d="M14 17.5h-4.5" />
+                    <path d="M18.5 14a3.5 3.5 0 0 0-3.5-3.5h-1" />
+                  </svg>
+                </span>
+                <img src={districStar} alt="" className="promo-card-star-decor" aria-hidden="true" />
+              </div>
 
-            <div className="promo-card-dates-box">
-              <span className="promo-card-day">{promoFields.day}</span>
-              <span className="promo-card-date">{promoFields.date}</span>
-            </div>
+              <div className="promo-card-dates-box">
+                <span className="promo-card-day">{promo.day}</span>
+                <span className="promo-card-date">{promo.date}</span>
+              </div>
 
-            <div className="promo-card-headline">
-              {promoFields.headline}
-              <span className="promo-card-headline-highlight">{promoFields.highlight}</span>
-            </div>
+              <div className="promo-card-headline">
+                {promo.headline}
+                <span className="promo-card-headline-highlight">{promo.highlight}</span>
+              </div>
 
-            <div className="promo-card-divider"></div>
+              <div className="promo-card-divider"></div>
 
-            <div className="promo-card-condition-box">
-              <p className="promo-card-condition-label">{promoFields.condition}</p>
-              <p className="promo-card-condition-price">{promoFields.price}</p>
-            </div>
+              <div className="promo-card-condition-box">
+                <p className="promo-card-condition-label">{promo.condition}</p>
+                <p className="promo-card-condition-price">{promo.price}</p>
+              </div>
 
-            <div className="promo-card-footer">
-              <span className="promo-card-terms">{promoFields.terms}</span>
+              <div className="promo-card-footer">
+                <span className="promo-card-terms">{promo.terms}</span>
+              </div>
             </div>
-          </div>
+          ))}
         </aside>
       )}
     </div>
@@ -1615,27 +1638,44 @@ function App() {
 
       {/* MODAL DE ANUNCIO */}
       {isAnnouncementOpen && announcement && announcement.is_visible !== false && (
-        <div className={`announcement-overlay announcement-${announcement.campaign_type || 'modal'}`} role="presentation" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: announcement.campaign_type === 'banner' ? 'flex-start' : 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="announcement-panel" role="dialog" aria-modal="true" aria-labelledby="store-announcement-title" style={{ backgroundColor: '#111111', borderRadius: '24px', overflow: 'hidden', width: '100%', maxWidth: '400px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', border: '1px solid #333' }}>
+        <div 
+          className={`announcement-overlay announcement-${announcement.campaign_type || 'modal'}`} 
+          role="presentation" 
+          onClick={() => { markAnnouncementSeen(announcement); setIsAnnouncementOpen(false); }}
+        >
+          <div 
+            className="announcement-panel" 
+            role="dialog" 
+            aria-modal="true" 
+            aria-labelledby="store-announcement-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button 
               className="announcement-close"
               onClick={() => { markAnnouncementSeen(announcement); setIsAnnouncementOpen(false); }}
               aria-label="Cerrar anuncio"
-              style={{ position: 'absolute', top: '16px', right: '16px', width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', color: '#FFF', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
             >
               <X size={20} />
             </button>
             
             {announcement.image_url && (
-              <div className="announcement-media" style={{ flexShrink: 1, overflow: 'hidden', display: 'flex', justifyContent: 'center', backgroundColor: '#000' }}>
-                <img className="announcement-image" src={announcement.image_url} alt={announcement.title || 'Anuncio'} decoding="async" style={{ width: '100%', height: 'auto', maxHeight: '55vh', objectFit: 'contain' }} />
+              <div className="announcement-media">
+                <img 
+                  className="announcement-image" 
+                  src={announcement.image_url} 
+                  alt={announcement.title || 'Anuncio'} 
+                  decoding="async" 
+                />
               </div>
             )}
             
-            <div className="announcement-content" style={{ padding: '24px', textAlign: 'center', overflowY: 'auto' }}>
-              <h3 id="store-announcement-title" className="announcement-title" style={{ margin: '0 0 12px 0', color: '#FFFFFF', fontSize: '24px', fontWeight: '800' }}>
-                {announcement.title}
-              </h3>
+            <div className="announcement-content">
+              {/* Si hay cuerpo o no hay imagen, mostramos el título */}
+              {announcement.title && (announcement.body || !announcement.image_url) && (
+                <h3 id="store-announcement-title" className="announcement-title">
+                  {announcement.title}
+                </h3>
+              )}
               {announcement.body && <p className="announcement-body">{announcement.body}</p>}
               <button 
                 className="announcement-action"
@@ -1643,11 +1683,12 @@ function App() {
                   markAnnouncementSeen(announcement);
                   recordAnnouncement(announcement.id, 'click');
                   setIsAnnouncementOpen(false);
-                  if (announcement.cta_url) window.location.assign(announcement.cta_url);
+                  if (announcement.cta_url && announcement.cta_url !== '/' && announcement.cta_url !== window.location.pathname) {
+                    window.location.assign(announcement.cta_url);
+                  }
                 }}
-                style={{ backgroundColor: '#D4A017', color: '#000', border: 'none', borderRadius: '12px', padding: '14px 24px', fontWeight: '700', fontSize: '16px', width: '100%', cursor: 'pointer' }}
               >
-                {announcement.cta_label || 'Continuar'}
+                {announcement.cta_label || 'Entendido'}
               </button>
             </div>
           </div>

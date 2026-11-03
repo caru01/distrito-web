@@ -2141,17 +2141,22 @@ h1, h2, h3, h4, h5, h6,
   }
 
   /* Ocultar banner móvil en escritorio */
+  .promo-delivery-mobile-stack,
   .promo-delivery-banner-mobile {
     display: none !important;
   }
 
-  /* Tarjeta Promocional en Escritorio (Fondo blanco con matiz rosa muy suave #FFF7F7) */
+  /* Tarjetas de Anuncio en Escritorio (Fondo blanco con matiz rosa muy suave #FFF7F7) */
   .promo-delivery-sidebar-desktop {
     width: 300px;
     flex-shrink: 0;
     position: sticky;
     top: 85px;
     z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    align-self: flex-start;
   }
 
   .promo-card-inner {
@@ -2323,6 +2328,14 @@ h1, h2, h3, h4, h5, h6,
     display: none !important;
   }
 
+  .promo-delivery-mobile-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
   .promo-delivery-banner-mobile {
     display: flex !important;
     align-items: center;
@@ -2330,7 +2343,7 @@ h1, h2, h3, h4, h5, h6,
     border: 1.5px solid #F8D7DA;
     border-radius: 16px;
     padding: 0.75rem 0.95rem;
-    margin: 0.25rem 1rem 1.25rem;
+    margin: 0.25rem 1rem 0.5rem;
     box-shadow: 0 4px 14px rgba(179, 4, 1, 0.05);
     gap: 0.85rem;
     box-sizing: border-box;
@@ -4362,3 +4375,151 @@ textarea {
   }
 }
 
+
+
+/* ==========================================================================
+   MODAL DE ANUNCIOS - DISEÑO IDENTIDAD DISTRIC HOUSE
+   ========================================================================== */
+.announcement-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: fadeIn 0.22s ease-out;
+}
+
+.announcement-overlay.announcement-banner {
+  align-items: flex-start;
+  background-color: transparent;
+  pointer-events: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.announcement-panel {
+  background-color: #FFFFFF;
+  border-radius: 24px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 430px;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.45), 0 0 0 1.5px rgba(179, 4, 1, 0.22);
+  border: 1.5px solid #F2D5D7;
+  animation: popUpModal 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+.announcement-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #111111;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.announcement-close:hover {
+  background-color: #B30401;
+  color: #FFFFFF;
+  border-color: #B30401;
+  transform: scale(1.08);
+  box-shadow: 0 4px 14px rgba(179, 4, 1, 0.4);
+}
+
+.announcement-media {
+  width: 100%;
+  max-height: 58dvh;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.announcement-image {
+  width: 100%;
+  height: auto;
+  max-height: 58dvh;
+  object-fit: contain;
+  display: block;
+}
+
+.announcement-content {
+  padding: 1.25rem 1.5rem 1.4rem;
+  background-color: #FFFFFF;
+  text-align: center;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.announcement-title {
+  margin: 0;
+  font-family: var(--font-title, 'MAGNUZ', sans-serif);
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #111111;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.announcement-body {
+  margin: 0;
+  color: #444444;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.announcement-action {
+  background: linear-gradient(135deg, #B30401 0%, #D20501 100%);
+  color: #FFFFFF !important;
+  border: none;
+  border-radius: 14px;
+  padding: 13px 24px;
+  font-family: var(--font-secondary, 'UNIFORMEXTRACONDENSED', 'Arial Narrow', sans-serif);
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 16px rgba(179, 4, 1, 0.35);
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.announcement-action:hover {
+  background: linear-gradient(135deg, #C20501 0%, #E60501 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(179, 4, 1, 0.52);
+}
+
+.announcement-action:active {
+  transform: translateY(0);
+}
