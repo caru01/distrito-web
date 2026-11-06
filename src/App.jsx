@@ -458,6 +458,7 @@ function App() {
 
   const handleCheckout = async (e) => {
     if (e) e.preventDefault();
+    if (loading) return;
     if (cart.length === 0) {
       alert("Tu carrito está vacío.");
       return;
@@ -483,12 +484,15 @@ function App() {
       return;
     }
 
+    const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
     let whatsappWindow = null;
-    try {
-      whatsappWindow = window.open('about:blank', 'distrito-order-whatsapp');
-      if (whatsappWindow) whatsappWindow.opener = null;
-    } catch {
-      whatsappWindow = null;
+    if (!isMobile) {
+      try {
+        whatsappWindow = window.open('about:blank', 'distrito-order-whatsapp');
+        if (whatsappWindow) whatsappWindow.opener = null;
+      } catch {
+        whatsappWindow = null;
+      }
     }
     
     setLoading(true);
@@ -1511,9 +1515,9 @@ function App() {
                   <button 
                     className="checkout-btn" 
                     onClick={handleCheckout}
-                    disabled={cart.length === 0 || !horariosStatus?.isOpen}
+                    disabled={loading || cart.length === 0 || !horariosStatus?.isOpen}
                   >
-                    {horariosStatus?.isOpen ? 'Confirmar por WhatsApp' : 'Restaurante Cerrado'}
+                    {loading ? 'Confirmando pedido…' : (horariosStatus?.isOpen ? 'Confirmar por WhatsApp' : 'Restaurante Cerrado')}
                   </button>
                   <button 
                     className="empty-cart-btn" 
