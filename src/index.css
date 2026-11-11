@@ -672,6 +672,7 @@ h1, h2, h3, h4, h5, h6,
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
   position: sticky;
   top: 65px;
   z-index: 40;
@@ -2445,6 +2446,28 @@ h1, h2, h3, h4, h5, h6,
 
 /* Pantallas móviles muy pequeñas (<= 360px) */
 @media (max-width: 360px) {
+  .key-info-container {
+    gap: 0.35rem;
+  }
+  .key-info-card {
+    padding: 0.55rem 0.25rem;
+  }
+  .key-info-title {
+    font-size: 0.7rem;
+  }
+  .key-info-text,
+  .key-info-action {
+    font-size: 0.62rem;
+  }
+  .payment-options-grid {
+    gap: 0.45rem;
+  }
+  .payment-option-card {
+    padding: 0.75rem 0.25rem;
+  }
+  .payment-option-title {
+    font-size: 0.74rem;
+  }
   .promo-delivery-banner-mobile {
     padding: 0.65rem 0.75rem;
     gap: 0.6rem;
@@ -2523,6 +2546,7 @@ h1, h2, h3, h4, h5, h6,
     padding: 0.5rem 1rem 1.5rem;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
   }
   .categories::-webkit-scrollbar {
     display: none;
@@ -4366,6 +4390,14 @@ textarea {
   }
 
   .product-detail-footer {
+    position: sticky;
+    bottom: 0;
+    background: #FFFFFF;
+    padding-top: 0.75rem;
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom));
+    margin-top: 1rem;
+    box-shadow: 0 -8px 16px rgba(255, 255, 255, 0.95);
+    z-index: 10;
     gap: 0.65rem;
   }
 
