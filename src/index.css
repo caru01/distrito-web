@@ -2810,6 +2810,8 @@ h1, h2, h3, h4, h5, h6,
   .cart-content-scroll {
     padding: 1.5rem 1rem;
     min-height: 0;
+    scroll-padding-bottom: 120px;
+    overscroll-behavior-y: contain;
   }
   
   .cart-header {
@@ -2817,7 +2819,7 @@ h1, h2, h3, h4, h5, h6,
   }
   
   .cart-footer {
-    padding: 1.5rem 1rem;
+    padding: 1.25rem 1rem max(1.25rem, calc(1rem + env(safe-area-inset-bottom, 0px)));
   }
 
   /* Why-cards en 2 columnas para móvil */
@@ -3781,8 +3783,12 @@ textarea {
   }
 
   .add-btn {
-    padding: 0.4rem 0.75rem;
-    font-size: 0.72rem;
+    min-height: 44px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .mobile-cart-bar {

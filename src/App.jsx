@@ -448,6 +448,14 @@ function App() {
   const deliveryFee = customer.deliveryType === 'domicilio' ? Math.max(0, Number(settings.delivery_cost || 0)) : 0;
   const orderTotal = subtotal + deliveryFee;
   const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  const handleInputFocus = (e) => {
+    const target = e.target;
+    setTimeout(() => {
+      if (target && typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 250);
+  };
   const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
   const copyToClipboard = (text, type) => {
@@ -1278,10 +1286,10 @@ function App() {
             <div className="customer-form">
               <h3 className="form-section-title">Datos del Cliente</h3>
               <div className="form-group">
-                <input type="text" className="form-input" placeholder="Nombre y Apellido" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
+                <input type="text" className="form-input" placeholder="Nombre y Apellido" onFocus={handleInputFocus} value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
               </div>
               <div className="form-group">
-                <input type="tel" className="form-input" placeholder="Teléfono (WhatsApp)" value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} />
+                <input type="tel" className="form-input" placeholder="Teléfono (WhatsApp)" onFocus={handleInputFocus} value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} />
               </div>
 
               {!horariosStatus?.isOpen && (
@@ -1307,7 +1315,7 @@ function App() {
                       id="delivery-address" 
                       type="text" 
                       className="form-input" 
-                      placeholder="Ej. Calle 15 # 12-34" 
+                      placeholder="Ej. Calle 15 # 12-34" onFocus={handleInputFocus} 
                       value={customer.address} 
                       onChange={e => setCustomer({...customer, address: e.target.value})} 
                       autoComplete="street-address"
@@ -1315,25 +1323,25 @@ function App() {
                   </div>
                   <div className="form-group">
                     <label htmlFor="delivery-barrio">Barrio</label>
-                    <input id="delivery-barrio" type="text" className="form-input" placeholder="Ej. Los Cortijos, San Joaquín..." value={customer.barrio} onChange={e => setCustomer({...customer, barrio: e.target.value})} />
+                    <input id="delivery-barrio" type="text" className="form-input" placeholder="Ej. Los Cortijos, San Joaquín..." onFocus={handleInputFocus} value={customer.barrio} onChange={e => setCustomer({...customer, barrio: e.target.value})} />
                   </div>
                   <div className="delivery-details-grid">
                     <div className="form-group">
                       <label htmlFor="delivery-apartment">Apartamento</label>
-                      <input id="delivery-apartment" type="text" className="form-input" placeholder="Ej. 302" value={customer.apartment} onChange={e => setCustomer({...customer, apartment: e.target.value})} />
+                      <input id="delivery-apartment" type="text" className="form-input" placeholder="Ej. 302" onFocus={handleInputFocus} value={customer.apartment} onChange={e => setCustomer({...customer, apartment: e.target.value})} />
                     </div>
                     <div className="form-group">
                       <label htmlFor="delivery-tower">Torre</label>
-                      <input id="delivery-tower" type="text" className="form-input" placeholder="Ej. 2" value={customer.tower} onChange={e => setCustomer({...customer, tower: e.target.value})} />
+                      <input id="delivery-tower" type="text" className="form-input" placeholder="Ej. 2" onFocus={handleInputFocus} value={customer.tower} onChange={e => setCustomer({...customer, tower: e.target.value})} />
                     </div>
                     <div className="form-group">
                       <label htmlFor="delivery-floor">Piso</label>
-                      <input id="delivery-floor" type="text" className="form-input" placeholder="Ej. 3" value={customer.floor} onChange={e => setCustomer({...customer, floor: e.target.value})} />
+                      <input id="delivery-floor" type="text" className="form-input" placeholder="Ej. 3" onFocus={handleInputFocus} value={customer.floor} onChange={e => setCustomer({...customer, floor: e.target.value})} />
                     </div>
                   </div>
                   <div className="form-group">
                     <label htmlFor="delivery-reference">Referencia</label>
-                    <textarea id="delivery-reference" className="form-input delivery-reference-input" placeholder="Ej. portón negro, casa azul, frente al parque" value={customer.reference} onChange={e => setCustomer({...customer, reference: e.target.value})} />
+                    <textarea id="delivery-reference" className="form-input delivery-reference-input" placeholder="Ej. portón negro, casa azul, frente al parque" onFocus={handleInputFocus} value={customer.reference} onChange={e => setCustomer({...customer, reference: e.target.value})} />
                   </div>
                 </>
               ) : (
@@ -1351,7 +1359,7 @@ function App() {
               )}
 
               <div className="form-group">
-                <input type="text" className="form-input" placeholder="Comentario (opcional)" value={customer.comment} onChange={e => setCustomer({...customer, comment: e.target.value})} />
+                <input type="text" className="form-input" placeholder="Comentario (opcional)" onFocus={handleInputFocus} value={customer.comment} onChange={e => setCustomer({...customer, comment: e.target.value})} />
               </div>
 
               <h3 className="form-section-title">Método de Pago</h3>
