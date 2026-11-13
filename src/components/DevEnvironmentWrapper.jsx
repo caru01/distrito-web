@@ -20,6 +20,11 @@ export default function DevEnvironmentWrapper({ children }) {
     return params.get(key) || defaultVal;
   };
 
+  // Si estamos dentro del iframe simulado, renderizar directamente los children sin wrapper
+  if (getQueryParam('frame') === 'mobile') {
+    return <>{children}</>;
+  }
+
   const initialView = getQueryParam('view', 'customer');
   const initialMode = getQueryParam('mode', 'desktop');
 
@@ -260,37 +265,68 @@ export default function DevEnvironmentWrapper({ children }) {
             
             {/* Marco iPhone */}
             <div style={{
-              width: '390px',
-              height: '760px',
-              borderRadius: '44px',
-              border: '10px solid #242424',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1)',
+              width: '400px',
+              height: '820px',
+              borderRadius: '48px',
+              border: '12px solid #222222',
+              boxShadow: '0 25px 70px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08)',
               overflow: 'hidden',
-              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
               backgroundColor: '#000000'
             }}>
-              {/* Dynamic Island / Notch */}
+              {/* Barra de Estado Superior iPhone (Status Bar + Dynamic Island) */}
               <div style={{
-                position: 'absolute',
-                top: '10px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '110px',
-                height: '24px',
+                height: '38px',
+                minHeight: '38px',
                 backgroundColor: '#000000',
-                borderRadius: '16px',
-                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 22px',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: '700',
+                userSelect: 'none'
+              }}>
+                <span>9:41</span>
+                {/* Dynamic Island */}
+                <div style={{
+                  width: '96px',
+                  height: '22px',
+                  backgroundColor: '#161616',
+                  borderRadius: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}>
+                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#0a0a0a' }} />
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#080808' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px' }}>
+                  <span>5G</span>
+                  <span>100%</span>
+                </div>
+              </div>
+
+              {/* Iframe aislado para que se activen las media queries móviles reales */}
+              <iframe
+                src="/?frame=mobile"
+                style={{ flex: 1, width: '100%', border: 'none', backgroundColor: '#FFFFFF' }}
+                title="Vista Móvil del Cliente"
+              />
+
+              {/* Home Bar Inferior */}
+              <div style={{
+                height: '16px',
+                minHeight: '16px',
+                backgroundColor: '#000000',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#181818', marginRight: '6px' }} />
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#111111' }} />
-              </div>
-
-              {/* Contenido de la tienda con scroll nativo */}
-              <div style={{ width: '100%', height: '100%', overflowY: 'auto' }}>
-                {children}
+                <div style={{ width: '120px', height: '4px', backgroundColor: '#3A3A3A', borderRadius: '4px' }} />
               </div>
             </div>
           </div>
@@ -324,18 +360,98 @@ export default function DevEnvironmentWrapper({ children }) {
           </div>
         </div>
       ) : currentView === 'admin' ? (
-        /* CASO 2: VISTA ADMIN COMPLETA */
-        <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-          <iframe
-            src="http://localhost:5174/admin/pedidos"
-            style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#0A0A0A' }}
-            title="Panel de Administración"
-          />
-        </div>
+        /* CASO 2: VISTA ADMIN (SOPORTA MÓVIL Y ESCRITORIO) */
+        currentMode === 'mobile' ? (
+          <div style={{
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '40px 20px',
+            backgroundColor: '#070707'
+          }}>
+            <div style={{ color: '#D4A017', fontSize: '12px', fontWeight: '700', marginBottom: '8px', letterSpacing: '1px' }}>
+              📊 VISTA PANEL ADMIN (MÓVIL)
+            </div>
+            <div style={{
+              width: '400px',
+              height: '820px',
+              borderRadius: '48px',
+              border: '12px solid #222222',
+              boxShadow: '0 25px 70px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: '#000000'
+            }}>
+              {/* Barra de Estado Superior iPhone */}
+              <div style={{
+                height: '38px',
+                minHeight: '38px',
+                backgroundColor: '#000000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 22px',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: '700',
+                userSelect: 'none'
+              }}>
+                <span>9:41</span>
+                <div style={{
+                  width: '96px',
+                  height: '22px',
+                  backgroundColor: '#161616',
+                  borderRadius: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}>
+                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#0a0a0a' }} />
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#080808' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px' }}>
+                  <span>5G</span>
+                  <span>100%</span>
+                </div>
+              </div>
+
+              {/* Iframe del Admin en móvil */}
+              <iframe
+                src="http://localhost:5174/admin/pedidos"
+                style={{ flex: 1, width: '100%', border: 'none', backgroundColor: '#111111' }}
+                title="Panel de Administración Móvil"
+              />
+
+              {/* Home Bar Inferior */}
+              <div style={{
+                height: '16px',
+                minHeight: '16px',
+                backgroundColor: '#000000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <div style={{ width: '120px', height: '4px', backgroundColor: '#3A3A3A', borderRadius: '4px' }} />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+            <iframe
+              src="http://localhost:5174/admin/pedidos"
+              style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#0A0A0A' }}
+              title="Panel de Administración"
+            />
+          </div>
+        )
       ) : (
         /* CASO 3: VISTA CLIENTE */
         currentMode === 'mobile' ? (
-          /* En marco de celular */
+          /* En marco de celular con Iframe Aislado */
           <div style={{
             minHeight: '100vh',
             display: 'flex',
@@ -346,30 +462,66 @@ export default function DevEnvironmentWrapper({ children }) {
           }}>
             <div style={{
               width: '400px',
-              height: '840px',
+              height: '820px',
               borderRadius: '48px',
               border: '12px solid #222222',
               boxShadow: '0 25px 70px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08)',
               overflow: 'hidden',
-              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
               backgroundColor: '#000000'
             }}>
-              {/* Dynamic Island */}
+              {/* Barra de Estado Superior iPhone */}
               <div style={{
-                position: 'absolute',
-                top: '12px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '116px',
-                height: '26px',
+                height: '38px',
+                minHeight: '38px',
                 backgroundColor: '#000000',
-                borderRadius: '16px',
-                zIndex: 9999
-              }} />
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 22px',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: '700',
+                userSelect: 'none'
+              }}>
+                <span>9:41</span>
+                <div style={{
+                  width: '96px',
+                  height: '22px',
+                  backgroundColor: '#161616',
+                  borderRadius: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}>
+                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#0a0a0a' }} />
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#080808' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px' }}>
+                  <span>5G</span>
+                  <span>100%</span>
+                </div>
+              </div>
 
-              {/* Contenido con scroll */}
-              <div style={{ width: '100%', height: '100%', overflowY: 'auto' }}>
-                {children}
+              {/* Iframe con viewport móvil real de 400px */}
+              <iframe
+                src="/?frame=mobile"
+                style={{ flex: 1, width: '100%', border: 'none', backgroundColor: '#FFFFFF' }}
+                title="Vista Móvil de la Tienda"
+              />
+
+              {/* Home Bar Inferior */}
+              <div style={{
+                height: '16px',
+                minHeight: '16px',
+                backgroundColor: '#000000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <div style={{ width: '120px', height: '4px', backgroundColor: '#3A3A3A', borderRadius: '4px' }} />
               </div>
             </div>
           </div>

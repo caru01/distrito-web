@@ -46,6 +46,16 @@ function trackingOrderFromUrl() {
   return Number.isInteger(id) && id > 0 && token ? { id, token, fromLink: true } : null;
 }
 
+const DEFAULT_SAUCES = [
+  { id: '6f4caf86-cfba-464a-9cd7-04da606187da', title: 'Salsa Tártara', price: 1500, emoji: '🥣' },
+  { id: '6f6a8d24-9117-47ba-b0e5-f58d3a31acde', title: 'Salsa de Piña', price: 1500, emoji: '🍍' },
+  { id: 'bdf5ab93-3a78-46ab-b71a-406d48be5917', title: 'Salsa de Maíz', price: 1500, emoji: '🌽' },
+  { id: '9f5f0ec0-0c95-48aa-9a13-71e49d938703', title: 'Salsa BBQ', price: 1500, emoji: '🍖' },
+  { id: 'e06cc024-1f2a-4bb6-a9e5-c34d1a39b491', title: 'Crema Leña', price: 1500, emoji: '🔥' },
+  { id: 'cfd59593-61e5-40cd-b567-103f53fb89a2', title: 'Salsa Rosada', price: 1000, emoji: '🌸' },
+  { id: '32a42434-683d-4a2e-94b0-446de9c2bd4c', title: 'Salsa de Queso Cheddar', price: 2000, emoji: '🧀' }
+];
+
 function App() {
   const [activeCategory, setActiveCategory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +80,9 @@ function App() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedProductDetail, setSelectedProductDetail] = useState(null);
   const [detailModalQty, setDetailModalQty] = useState(1);
+  const [sauceModalProduct, setSauceModalProduct] = useState(null);
+  const [selectedSauces, setSelectedSauces] = useState({});
+  const [productNotes, setProductNotes] = useState('');
   const [isTrackingOpen, setIsTrackingOpen] = useState(() => Boolean(trackingOrderFromUrl()));
   const [latestOrder, setLatestOrder] = useState(() => {
     try {
@@ -413,27 +426,31 @@ function App() {
 
   const promoFields = parsedPromoCards[0] || null;
 
-  const addToCart = (product, quantity = 1) => {
+  const addToCart = (product, quantity = 1, notes = '') => {
     if (product.track_stock && Number(product.stock) <= 0) return;
     const qtyToAdd = Math.max(1, Number(quantity) || 1);
+    const cleanNotes = typeof notes === 'string' ? notes.trim() : '';
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+      const existing = prev.find(item => item.id === product.id && (item.notes || '') === cleanNotes);
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + qtyToAdd } : item);
+        return prev.map(item => (item.id === product.id && (item.notes || '') === cleanNotes) ? { ...item, qty: item.qty + qtyToAdd } : item);
       }
-      return [...prev, { ...product, qty: qtyToAdd }];
+      return [...prev, { ...product, qty: qtyToAdd, notes: cleanNotes }];
     });
   };
 
-  const updateQty = (id, delta) => {
+  const updateQty = (id, delta, notes = undefined) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
+      const matches = notes !== undefined
+        ? (item.id === id && (item.notes || '') === notes)
+        : (item.id === id);
+      if (matches) {
         const newQty = item.qty + delta;
         if (item.track_stock && newQty > Number(item.stock || 0)) return item;
         return newQty > 0 ? { ...item, qty: newQty } : item;
       }
       return item;
-    }).filter(item => item.qty > 0)); // also remove if 0
+    }).filter(item => item.qty > 0));
   };
 
   const removeItem = (id) => setCart(prev => prev.filter(item => item.id !== id));
@@ -452,11 +469,106 @@ function App() {
     const target = e.target;
     setTimeout(() => {
       if (target && typeof target.scrollIntoView === 'function') {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
-    }, 250);
+    }, 150);
   };
   const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+
+  const getAdicionEmoji = (title) => {
+    const t = (title || '').toLowerCase();
+    if (t.includes('carne')) return '🥩';
+    if (t.includes('papa')) return '🍟';
+    if (t.includes('queso') || t.includes('cheddar')) return '🧀';
+    if (t.includes('tocineta') || t.includes('bacon')) return '🥓';
+    if (t.includes('piña')) return '🍍';
+    if (t.includes('maíz') || t.includes('maiz')) return '🌽';
+    if (t.includes('tártara') || t.includes('tartara')) return '🥣';
+    if (t.includes('bbq')) return '🍖';
+    if (t.includes('leña') || t.includes('leña')) return '🔥';
+    if (t.includes('rosada')) return '🌸';
+    return '🥫';
+  };
+
+  const currentProductAdicionales = useMemo(() => {
+    if (!sauceModalProduct?.product) return [];
+    const prod = sauceModalProduct.product;
+    const allDbAdicionales = (products || []).filter(p => {
+      const isActive = p.status !== 'Inactivo' && p.status !== 'Agotado';
+      const inStock = !p.track_stock || Number(p.stock || 0) > 0;
+      return isActive && inStock && (p.category === 'Adicionales' || (p.title && p.title.toLowerCase().includes('salsa')));
+    });
+
+    let filtered = [];
+    if (Array.isArray(prod.adicionales_ids) && prod.adicionales_ids.length > 0) {
+      filtered = allDbAdicionales.filter(a => prod.adicionales_ids.includes(String(a.id)));
+    } else {
+      filtered = allDbAdicionales;
+    }
+
+    if (filtered.length === 0) {
+      filtered = DEFAULT_SAUCES;
+    }
+
+    return filtered.map(item => ({
+      ...item,
+      emoji: getAdicionEmoji(item.title),
+      price: Number(item.price) || 1500
+    }));
+  }, [sauceModalProduct, products]);
+
+  const isBeverageOrSauce = (product) => {
+    if (!product) return false;
+    const cat = (product.category || '').toLowerCase();
+    const title = (product.title || '').toLowerCase();
+    if (cat.includes('bebida') || cat.includes('gaseosa') || cat.includes('adicional') || cat.includes('salsa')) return true;
+    if (['coca', 'cola', 'pepsi', 'sprite', 'quatro', 'agua', 'jugo', 'hit', 'manzana', 'cerveza', 'salsa', 'crema leña'].some(w => title.includes(w))) return true;
+    return false;
+  };
+
+  const handleSauceQtyChange = (adicionId, delta) => {
+    setSelectedSauces(prev => {
+      const current = prev[adicionId] || 0;
+      const next = Math.max(0, current + delta);
+      if (next === 0) {
+        const copy = { ...prev };
+        delete copy[adicionId];
+        return copy;
+      }
+      return { ...prev, [adicionId]: next };
+    });
+  };
+
+  const totalSauceItems = Object.values(selectedSauces).reduce((a, b) => a + b, 0);
+  const totalSaucesExtraPrice = Object.entries(selectedSauces).reduce((sum, [id, qty]) => {
+    const item = currentProductAdicionales.find(s => s.id === id);
+    return sum + (item ? (Number(item.price) || 0) * qty : 0);
+  }, 0);
+
+  const confirmAddWithSauces = () => {
+    if (!sauceModalProduct) return;
+    addToCart(sauceModalProduct.product, sauceModalProduct.quantity, productNotes);
+    Object.entries(selectedSauces).forEach(([adicionId, qty]) => {
+      if (qty > 0) {
+        const itemObj = currentProductAdicionales.find(s => s.id === adicionId);
+        if (itemObj) {
+          addToCart(itemObj, qty);
+        }
+      }
+    });
+    setSauceModalProduct(null);
+    setSelectedSauces({});
+    setProductNotes('');
+  };
+
+  const skipSaucesAndAdd = () => {
+    if (!sauceModalProduct) return;
+    addToCart(sauceModalProduct.product, sauceModalProduct.quantity, productNotes);
+    setSauceModalProduct(null);
+    setSelectedSauces({});
+    setProductNotes('');
+  };
+
 
   const copyToClipboard = (text, type) => {
     navigator.clipboard.writeText(text);
@@ -520,7 +632,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer,
-          cart: cart.map(({ id, quantity, qty }) => ({ id, quantity: quantity || qty || 1 }))
+          cart: cart.map(({ id, quantity, qty, notes }) => ({ id, quantity: quantity || qty || 1, notes: notes || '' }))
         })
       });
       const data = await res.json();
@@ -1204,12 +1316,13 @@ function App() {
                     )}
                     <div className="cart-item-details">
                       <h4 className="cart-item-title">{item.title}</h4>
+                      {item.notes && <div className="cart-item-notes">📝 {item.notes}</div>}
                       <p className="cart-item-price">{formatter.format(item.price)}</p>
                       <div className="cart-item-actions">
                         <div className="cart-qty-pill">
-                          <button className="qty-btn" onClick={() => updateQty(item.id, -1)}><Minus size={14} /></button>
+                          <button className="qty-btn" onClick={() => updateQty(item.id, -1, item.notes)}><Minus size={14} /></button>
                           <span className="qty">{item.qty}</span>
-                          <button className="qty-btn" onClick={() => updateQty(item.id, 1)}><Plus size={14} /></button>
+                          <button className="qty-btn" onClick={() => updateQty(item.id, 1, item.notes)}><Plus size={14} /></button>
                         </div>
                         <button className="delete-btn" onClick={() => removeItem(item.id)}><Trash2 size={16} /></button>
                       </div>
@@ -1324,20 +1437,6 @@ function App() {
                   <div className="form-group">
                     <label htmlFor="delivery-barrio">Barrio</label>
                     <input id="delivery-barrio" type="text" className="form-input" placeholder="Ej. Los Cortijos, San Joaquín..." onFocus={handleInputFocus} value={customer.barrio} onChange={e => setCustomer({...customer, barrio: e.target.value})} />
-                  </div>
-                  <div className="delivery-details-grid">
-                    <div className="form-group">
-                      <label htmlFor="delivery-apartment">Apartamento</label>
-                      <input id="delivery-apartment" type="text" className="form-input" placeholder="Ej. 302" onFocus={handleInputFocus} value={customer.apartment} onChange={e => setCustomer({...customer, apartment: e.target.value})} />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="delivery-tower">Torre</label>
-                      <input id="delivery-tower" type="text" className="form-input" placeholder="Ej. 2" onFocus={handleInputFocus} value={customer.tower} onChange={e => setCustomer({...customer, tower: e.target.value})} />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="delivery-floor">Piso</label>
-                      <input id="delivery-floor" type="text" className="form-input" placeholder="Ej. 3" onFocus={handleInputFocus} value={customer.floor} onChange={e => setCustomer({...customer, floor: e.target.value})} />
-                    </div>
                   </div>
                   <div className="form-group">
                     <label htmlFor="delivery-reference">Referencia</label>
@@ -1844,8 +1943,14 @@ function App() {
                     if ((selectedProductDetail.track_stock && Number(selectedProductDetail.stock) <= 0) || selectedProductDetail.status === 'Agotado') {
                       return;
                     }
-                    addToCart(selectedProductDetail, detailModalQty);
-                    setSelectedProductDetail(null);
+                    if (isBeverageOrSauce(selectedProductDetail)) {
+                      addToCart(selectedProductDetail, detailModalQty);
+                      setSelectedProductDetail(null);
+                    } else {
+                      setSauceModalProduct({ product: selectedProductDetail, quantity: detailModalQty });
+                      setSelectedSauces({});
+                      setSelectedProductDetail(null);
+                    }
                   }}
                   disabled={(selectedProductDetail.track_stock && Number(selectedProductDetail.stock) <= 0) || selectedProductDetail.status === 'Agotado'}
                 >
@@ -1856,6 +1961,119 @@ function App() {
                       : !horariosStatus?.isOpen
                         ? 'HORARIO CERRADO'
                         : `AGREGAR • ${formatter.format(selectedProductDetail.price * detailModalQty)}`
+                    }
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ADICIONALES Y OBSERVACIONES */}
+      {sauceModalProduct && (
+        <div 
+          className="sauce-modal-overlay" 
+          onClick={skipSaucesAndAdd}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div 
+            className="sauce-modal-container" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              className="sauce-modal-close-btn" 
+              onClick={skipSaucesAndAdd}
+              aria-label="Cerrar modal"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="sauce-modal-header">
+              <span className="sauce-modal-badge">✨ ADICIONALES Y PERSONALIZACIÓN</span>
+              <h3 className="sauce-modal-title">¿Deseas adicionales o salsas?</h3>
+              <div className="sauce-modal-subtitle-row">
+                <p className="sauce-modal-subtitle">
+                  Acompaña tu <strong>{sauceModalProduct.product.title}</strong>:
+                </p>
+                <span className="sauce-modal-optional-tag">Opcional</span>
+              </div>
+            </div>
+
+            <div className="sauce-modal-list">
+              {currentProductAdicionales.map(adicion => {
+                const qty = selectedSauces[adicion.id] || 0;
+                return (
+                  <div key={adicion.id} className={`sauce-item-card ${qty > 0 ? 'is-selected' : ''}`}>
+                    <div className="sauce-item-info">
+                      <div className="sauce-item-text">
+                        <span className="sauce-item-name">{adicion.title}</span>
+                        <span className="sauce-item-price">+{formatter.format(adicion.price)}</span>
+                      </div>
+                    </div>
+                    <div className="sauce-item-controls">
+                      <button 
+                        type="button" 
+                        className="sauce-qty-btn" 
+                        onClick={() => handleSauceQtyChange(adicion.id, -1)}
+                        disabled={qty <= 0}
+                        aria-label="Disminuir"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className={`sauce-qty-number ${qty > 0 ? 'has-qty' : ''}`}>{qty}</span>
+                      <button 
+                        type="button" 
+                        className="sauce-qty-btn" 
+                        onClick={() => handleSauceQtyChange(adicion.id, 1)}
+                        aria-label="Aumentar"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* CUADRO DE OBSERVACIONES PARA COCINA */}
+              <div className="product-observations-card">
+                <label htmlFor="product-notes" className="product-observations-label">
+                  <span className="product-observations-label-text">
+                    📝 <strong>Observaciones o preferencias:</strong>
+                  </span>
+                  <span className="sauce-modal-optional-tag">Opcional</span>
+                </label>
+                <textarea
+                  id="product-notes"
+                  className="form-input product-observations-textarea"
+                  rows={2}
+                  placeholder="Ej: sin cebolla, sin verduras, carne bien asada..."
+                  value={productNotes}
+                  onChange={(e) => setProductNotes(e.target.value)}
+                  onFocus={handleInputFocus}
+                />
+              </div>
+            </div>
+
+            <div className="sauce-modal-footer">
+              {totalSaucesExtraPrice > 0 && (
+                <div className="sauce-modal-total-summary">
+                  <span>Adicionales ({totalSauceItems}):</span>
+                  <span className="sauce-modal-total-value">+{formatter.format(totalSaucesExtraPrice)}</span>
+                </div>
+              )}
+              <div className="sauce-modal-actions">
+                <button 
+                  type="button" 
+                  className="sauce-modal-submit-btn" 
+                  onClick={confirmAddWithSauces}
+                >
+                  <ShoppingBag size={18} />
+                  <span>
+                    {totalSauceItems > 0 
+                      ? `Agregar • ${formatter.format((sauceModalProduct.product.price * sauceModalProduct.quantity) + totalSaucesExtraPrice)}`
+                      : `Agregar • ${formatter.format(sauceModalProduct.product.price * sauceModalProduct.quantity)}`
                     }
                   </span>
                 </button>
@@ -1876,7 +2094,7 @@ function App() {
       />
 
       {/* BARRA INFERIOR FLOTANTE ("VER PEDIDO") */}
-      {cartTotalItems > 0 && !isCartOpenMobile && !selectedProductDetail && (
+      {cartTotalItems > 0 && !isCartOpenMobile && !selectedProductDetail && !sauceModalProduct && (
         <aside 
           className="mobile-cart-bar floating-order-bar" 
           onClick={() => setIsCartOpenMobile(true)}

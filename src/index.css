@@ -24,7 +24,10 @@
 }
 
 html, body {
-  overflow-x: clip;
+  overflow-x: hidden;
+  max-width: 100vw;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   margin: 0;
   padding: 0;
 }
@@ -1287,7 +1290,7 @@ h1, h2, h3, h4, h5, h6,
   padding: 0.75rem 0.95rem;
   border: 1.5px solid #E5E7EB;
   border-radius: 12px;
-  font-size: 0.92rem;
+  font-size: 16px;
   color: #111111;
   background-color: #FFFFFF;
   transition: all 0.2s ease;
@@ -4560,4 +4563,391 @@ textarea {
 
 .announcement-action:active {
   transform: translateY(0);
+}
+
+
+/* ============================================================
+   PREVENCION DE AUTO-ZOOM EN DISPOSITIVOS MOVILES
+   ============================================================ */
+@media screen and (max-width: 900px) {
+  input,
+  textarea,
+  select,
+  .form-input,
+  .form-input:focus,
+  .nav-search-input,
+  .mobile-search-input,
+  .delivery-reference-input,
+  #delivery-address,
+  #delivery-barrio,
+  #delivery-apartment,
+  #delivery-tower,
+  #delivery-floor,
+  #delivery-reference,
+  .customer-form input,
+  .customer-form textarea,
+  .customer-form select,
+  .checkout-section input,
+  .checkout-section textarea,
+  .checkout-section select {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
+}
+
+/* ============================================================
+   MODAL DE ADICIONAL DE SALSAS
+   ============================================================ */
+.sauce-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+  animation: sauceFadeIn 0.2s ease-out;
+}
+
+@keyframes sauceFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sauce-modal-container {
+  background-color: #FFFFFF;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  border-radius: 24px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  animation: sauceSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sauceSlideUp {
+  from { transform: translateY(20px) scale(0.97); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.sauce-modal-header {
+  padding: 1.25rem 1.25rem 0.85rem;
+  border-bottom: 1px solid #F3F4F6;
+  position: relative;
+  background: #FFFFFF;
+}
+
+.sauce-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #B30401;
+  background-color: #FFF5F5;
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+  border: 1px solid rgba(179, 4, 1, 0.15);
+}
+
+.sauce-modal-title {
+  font-size: 1.28rem;
+  font-weight: 900;
+  color: #111111;
+  font-family: var(--font-title);
+  margin: 0 0 0.25rem;
+  line-height: 1.2;
+}
+
+.sauce-modal-subtitle {
+  font-size: 0.86rem;
+  color: #666666;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.sauce-modal-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: #F3F4F6;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sauce-modal-close-btn:hover {
+  background-color: #E5E7EB;
+  color: #111111;
+}
+
+.sauce-modal-list {
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 52vh;
+}
+
+.sauce-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.95rem;
+  background-color: #FAFAFA;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.sauce-item-card.is-selected {
+  background-color: #FFF8F8;
+  border-color: #B30401;
+  box-shadow: 0 2px 8px rgba(179, 4, 1, 0.08);
+}
+
+.sauce-item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.sauce-item-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+}
+
+.sauce-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sauce-item-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sauce-item-price {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #B30401;
+  font-family: var(--font-secondary);
+  letter-spacing: 0.02em;
+}
+
+.sauce-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid #E5E7EB;
+  flex-shrink: 0;
+}
+
+.sauce-qty-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #E5E7EB;
+  background-color: #FFFFFF;
+  color: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sauce-qty-btn:hover:not(:disabled) {
+  background-color: #B30401;
+  border-color: #B30401;
+  color: #FFFFFF;
+}
+
+.sauce-qty-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sauce-qty-number {
+  min-width: 22px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #111111;
+  font-family: var(--font-secondary);
+}
+
+.sauce-qty-number.has-qty {
+  color: #B30401;
+}
+
+.sauce-modal-footer {
+  padding: 0.85rem 1.25rem 1.25rem;
+  border-top: 1px solid #F3F4F6;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.sauce-modal-total-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #444444;
+  padding: 0 0.25rem;
+}
+
+.sauce-modal-total-value {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #B30401;
+  font-family: var(--font-secondary);
+}
+
+.sauce-modal-subtitle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.sauce-modal-optional-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #71717A;
+  background-color: #F4F4F5;
+  border: 1px solid #E4E4E7;
+  padding: 0.18rem 0.55rem;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.sauce-modal-actions {
+  display: flex;
+  width: 100%;
+}
+
+.sauce-modal-submit-btn {
+  flex: 1;
+  width: 100%;
+  background-color: #B30401;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 16px;
+  padding: 0.88rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 900;
+  font-family: var(--font-secondary);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 14px rgba(179, 4, 1, 0.25);
+  transition: all 0.2s ease;
+}
+
+.sauce-modal-submit-btn:hover {
+  background-color: #D20501;
+  box-shadow: 0 6px 18px rgba(179, 4, 1, 0.35);
+}
+
+/* ============================================================
+   OBSERVACIONES Y NOTAS DE PRODUCTO
+   ============================================================ */
+.product-observations-card {
+  margin-top: 0.65rem;
+  background-color: #FAFAFA;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.product-observations-label {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #222222;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.product-observations-label-text {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.product-observations-textarea {
+  width: 100%;
+  resize: none;
+  font-size: 15px !important;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid #E5E7EB;
+  background-color: #FFFFFF;
+  font-family: inherit;
+  color: #111111;
+  box-sizing: border-box;
+}
+
+.product-observations-textarea:focus {
+  outline: none;
+  border-color: #B30401;
+  box-shadow: 0 0 0 2px rgba(179, 4, 1, 0.1);
+}
+
+.cart-item-notes {
+  font-size: 0.8rem;
+  color: #B30401;
+  font-weight: 600;
+  margin-top: 0.15rem;
+  line-height: 1.25;
 }
