@@ -7,6 +7,7 @@ import districStar from './assets/distric-star.png';
 import { API_URL } from './config/api';
 import OrderTracker from './components/OrderTracker';
 import ScheduleModal from './components/ScheduleModal';
+import AnnouncementModal from './components/AnnouncementModal';
 import { buildNewOrderWhatsAppMessage, createWhatsAppUrl } from '@distrito/shared-ui';
 import { applyWebTheme } from './utils/theme';
 
@@ -576,6 +577,37 @@ function App() {
     if (type === 'banco') { setCopiedBanco(true); setTimeout(() => setCopiedBanco(false), 2000); }
   };
 
+  const handlePhoneChange = (e) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.startsWith('57') && val.length > 10) {
+      val = val.slice(2);
+    }
+    val = val.slice(0, 10);
+    setCustomer(prev => ({ ...prev, phone: val }));
+  };
+
+  const handlePhoneKeyDown = (e) => {
+    if (
+      ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(e.key) ||
+      e.ctrlKey || e.metaKey
+    ) {
+      return;
+    }
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const handlePhonePaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text') || '';
+    let digits = text.replace(/\D/g, '');
+    if (digits.startsWith('57') && digits.length > 10) {
+      digits = digits.slice(2);
+    }
+    setCustomer(prev => ({ ...prev, phone: digits.slice(0, 10) }));
+  };
+
   const handleCheckout = async (e) => {
     if (e) e.preventDefault();
     if (loading) return;
@@ -587,8 +619,21 @@ function App() {
       alert(`No podemos recibir el pedido: ${horariosStatus?.statusText || 'restaurante cerrado'}.`);
       return;
     }
-    if (!customer.name || !customer.phone) {
-      alert("Por favor ingresa nombre y teléfono.");
+    if (!customer.name || !customer.name.trim()) {
+      alert("Por favor ingresa tu nombre y apellido.");
+      return;
+    }
+    const cleanPhone = String(customer.phone || '').replace(/\D/g, '');
+    if (!cleanPhone) {
+      alert("Por favor ingresa tu número de teléfono (WhatsApp).");
+      return;
+    }
+    if (!cleanPhone.startsWith('3') && !cleanPhone.startsWith('60')) {
+      alert("El número de teléfono debe ser un celular válido de Colombia (debe iniciar con 3, ej: 300 123 4567).");
+      return;
+    }
+    if (cleanPhone.length < 9 || cleanPhone.length > 10) {
+      alert("El número de teléfono debe tener 10 dígitos (ej: 300 123 4567).");
       return;
     }
     if (customer.deliveryType === 'domicilio' && (!customer.address || !customer.barrio)) {
@@ -1402,7 +1447,32 @@ function App() {
                 <input type="text" className="form-input" placeholder="Nombre y Apellido" onFocus={handleInputFocus} value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
               </div>
               <div className="form-group">
-                <input type="tel" className="form-input" placeholder="Teléfono (WhatsApp)" onFocus={handleInputFocus} value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  className="form-input"
+                  placeholder="Teléfono móvil (WhatsApp, ej: 300 123 4567)"
+                  onFocus={handleInputFocus}
+                  value={customer.phone}
+                  onChange={handlePhoneChange}
+                  onKeyDown={handlePhoneKeyDown}
+                  onPaste={handlePhonePaste}
+                />
+                {customer.phone && (
+                  <div style={{ fontSize: '12px', marginTop: '6px', fontWeight: 600 }}>
+                    {!customer.phone.startsWith('3') && !customer.phone.startsWith('60') ? (
+                      <span style={{ color: '#EF4444' }}>⚠️ Los celulares en Colombia inician con 3 (ej: 300, 310, 320...)</span>
+                    ) : customer.phone.length < 9 ? (
+                      <span style={{ color: '#D97706' }}>Ingresando número ({customer.phone.length}/10 dígitos)</span>
+                    ) : customer.phone.length === 9 ? (
+                      <span style={{ color: '#2563EB' }}>✓ 9 dígitos ingresados (o 10 dígitos)</span>
+                    ) : (
+                      <span style={{ color: '#16A34A' }}>✓ Celular colombiano válido (10 dígitos)</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {!horariosStatus?.isOpen && (
@@ -1747,64 +1817,23 @@ function App() {
         </footer>
       </main>
 
-      {/* MODAL DE ANUNCIO */}
-      {isAnnouncementOpen && announcement && announcement.is_visible !== false && (
-        <div 
-          className={`announcement-overlay announcement-${announcement.campaign_type || 'modal'}`} 
-          role="presentation" 
-          onClick={() => { markAnnouncementSeen(announcement); setIsAnnouncementOpen(false); }}
-        >
-          <div 
-            className="announcement-panel" 
-            role="dialog" 
-            aria-modal="true" 
-            aria-labelledby="store-announcement-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button 
-              className="announcement-close"
-              onClick={() => { markAnnouncementSeen(announcement); setIsAnnouncementOpen(false); }}
-              aria-label="Cerrar anuncio"
-            >
-              <X size={20} />
-            </button>
-            
-            {announcement.image_url && (
-              <div className="announcement-media">
-                <img 
-                  className="announcement-image" 
-                  src={announcement.image_url} 
-                  alt={announcement.title || 'Anuncio'} 
-                  decoding="async" 
-                />
-              </div>
-            )}
-            
-            <div className="announcement-content">
-              {/* Si hay cuerpo o no hay imagen, mostramos el título */}
-              {announcement.title && (announcement.body || !announcement.image_url) && (
-                <h3 id="store-announcement-title" className="announcement-title">
-                  {announcement.title}
-                </h3>
-              )}
-              {announcement.body && <p className="announcement-body">{announcement.body}</p>}
-              <button 
-                className="announcement-action"
-                onClick={() => {
-                  markAnnouncementSeen(announcement);
-                  recordAnnouncement(announcement.id, 'click');
-                  setIsAnnouncementOpen(false);
-                  if (announcement.cta_url && announcement.cta_url !== '/' && announcement.cta_url !== window.location.pathname) {
-                    window.location.assign(announcement.cta_url);
-                  }
-                }}
-              >
-                {announcement.cta_label || 'Entendido'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODAL DE ANUNCIO MODERNO Y PROFESIONAL */}
+      <AnnouncementModal
+        isOpen={isAnnouncementOpen}
+        announcement={announcement}
+        onClose={() => {
+          markAnnouncementSeen(announcement);
+          setIsAnnouncementOpen(false);
+        }}
+        onAction={(item) => {
+          markAnnouncementSeen(item);
+          recordAnnouncement(item.id, 'click');
+          setIsAnnouncementOpen(false);
+          if (item.cta_url && item.cta_url !== '/' && item.cta_url !== window.location.pathname) {
+            window.location.assign(item.cta_url);
+          }
+        }}
+      />
 
       {/* MODAL DE INSTALACIÓN PWA */}
       {showInstallBanner && (
