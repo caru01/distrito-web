@@ -674,9 +674,16 @@ function App() {
       // 1. Enviar la orden al backend (Dashboard CRM/Ventas) y obtener el ID
       const res = await fetch(`${API_URL}/checkout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-Platform': 'web'
+        },
         body: JSON.stringify({
-          customer,
+          source: 'Web',
+          customer: {
+            ...customer,
+            source: 'Web'
+          },
           cart: cart.map(({ id, quantity, qty, notes }) => ({ id, quantity: quantity || qty || 1, notes: notes || '' }))
         })
       });
