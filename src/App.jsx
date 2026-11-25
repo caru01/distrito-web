@@ -1175,7 +1175,7 @@ function App() {
 
         {/* Product Grid */}
         <div className="product-grid">
-          {filteredProducts.map(product => {
+          {filteredProducts.map((product, pIdx) => {
             const cartItem = cart.find(i => i.id === product.id);
             const soldOut = product.track_stock && Number(product.stock) <= 0;
             return (
@@ -1205,7 +1205,8 @@ function App() {
                       src={product.image} 
                       alt={product.title} 
                       className="product-image" 
-                      loading="lazy" 
+                      loading={pIdx < 6 ? "eager" : "lazy"} 
+                      fetchPriority={pIdx < 4 ? "high" : "auto"}
                       decoding="async"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
